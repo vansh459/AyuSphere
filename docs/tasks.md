@@ -56,3 +56,17 @@ Legend: ☐ pending · ◐ in progress · ✅ done (gate passed)
 | T4.2 | SDTM DM/AE CSV + Define-XML stub | Column sets match domain specs; seeded trial exports expected rows | ✅ |
 | T4.3 | Regulator read-only pass + audit browser | Every mutation service refuses regulator; audit query filters correct | ✅ |
 | T4.4 | Design QA sweep: 2-text-sizes rule, token-only colors, reduced motion, shared UX states | Static spec: no forbidden Tailwind text-size classes in `src/`; build passes | ✅ |
+
+## Phase 5 — Full CTMS UI (all nav routes implemented)
+
+| # | Task | Test gate | Status |
+|---|---|---|---|
+| T5.1 | Trials list + create + detail (lifecycle actions, KPIs, site risk bands, milestones) | `pnpm build` + full suite green | ✅ |
+| T5.2 | Ethics review queue (approve/return) + approved registry | `pnpm build` + full suite green | ✅ |
+| T5.3 | Participants: add → screen → consent → enrol → withdraw, full table | `pnpm build` + full suite green | ✅ |
+| T5.4 | Sites: registry, trial attach, activation | `pnpm build` + full suite green | ✅ |
+| T5.5 | Visits: swept schedule + per-visit e-CRF entry (draft/submit/approve) + complete | `pnpm build` + full suite green | ✅ |
+| T5.6 | Monitoring: site performance, data-quality findings, deviation alerts | `pnpm build` + full suite green | ✅ |
+| T5.7 | Documents: versioned upload (Blob or data-URL fallback) + library | `pnpm build` + full suite green | ✅ |
+| T5.8 | Settings: user create/deactivate (audited) | `pnpm build` + full suite green | ✅ |
+| T5.9 | Dashboard: live portfolio KPIs with role-aware click-throughs | `pnpm build` + full suite green | ✅ |
