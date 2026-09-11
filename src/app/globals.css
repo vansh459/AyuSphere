@@ -83,24 +83,15 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
-/* Scrollbar that blends into the dark sidebar: thin, translucent-white
-   thumb on a transparent track (visible only when needed/hovered). */
+/* Native scrollbar hidden for custom interactive animated overlay scrollbar */
 @utility scroll-dark {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 
   &::-webkit-scrollbar {
-    width: 6px;
-  }
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  &::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.22);
-    border-radius: 9999px;
-  }
-  &::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.4);
+    display: none;
+    width: 0;
+    height: 0;
   }
 }
 
