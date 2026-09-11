@@ -101,7 +101,7 @@ export default async function DashboardPage() {
         .innerJoin(participants, eq(visits.participantId, participants.id))
         .where(inArray(visits.status, ["due", "overdue", "upcoming"]))
         .orderBy(visits.scheduledDate)
-        .limit(30);
+        .limit(300);
       visitOptions = openVisits.map((v) => ({
         id: v.id,
         label: `${v.subjectCode} · ${v.name}`,

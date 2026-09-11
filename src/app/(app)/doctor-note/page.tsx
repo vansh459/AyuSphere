@@ -27,7 +27,7 @@ export default async function DoctorNotePage() {
       .innerJoin(participants, eq(visits.participantId, participants.id))
       .where(inArray(visits.status, ["due", "overdue", "upcoming"]))
       .orderBy(visits.scheduledDate)
-      .limit(50);
+      .limit(300);
     options = rows.map((r) => ({
       id: r.id,
       label: `${r.subjectCode} · ${r.name} · ${r.scheduledDate.toLocaleDateString()}`,
