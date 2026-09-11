@@ -45,7 +45,7 @@ flowchart LR
 - **Reads:** RSC pages query the service layer directly on the server; client dashboards revalidate through lightweight GET route handlers with SWR (D-011).
 - **Writes:** always server actions → RBAC guard → Zod parse → service → rules evaluation → Drizzle transaction → audit event. No client ever touches the DB shape directly.
 - **AI:** route handlers only (`/api/ai/extract`, `/api/ai/copilot`) so streaming and file handling stay off the action path.
-- **Cron:** `/api/cron/alerts` (Vercel Cron, every 10 min) sweeps time-based alert rules (overdue visits, approaching AE deadlines) that writes alone can't trigger.
+- **Cron:** `/api/cron/alerts` (Vercel Cron — daily on Hobby, 10 min on Pro; write-time evaluation covers intra-day) sweeps time-based alert rules (overdue visits, approaching AE deadlines) that writes alone can't trigger.
 
 ## 2. Layered architecture
 
@@ -161,7 +161,7 @@ Design points:
 Two evaluation triggers, one rule registry (`src/lib/rules/alerts.ts`):
 
 1. **On write** — any mutation re-evaluates rules touching that entity (e.g. enrolling a participant updates site recruitment velocity; approving a CRF may raise a deviation).
-2. **On schedule** — Vercel Cron (10 min) sweeps time-based rules: overdue visits (past `window_end`), approaching/breached AE deadlines, upcoming milestone due dates (CTRI/ethics), stale monitoring visits.
+2. **On schedule** — Vercel Cron (daily on Hobby; 10 min on Pro) sweeps time-based rules: overdue visits (past `window_end`), approaching/breached AE deadlines, upcoming milestone due dates (CTRI/ethics), stale monitoring visits.
 
 Built-in rule set (each maps to a PS-named alert): `enrolment_lag`, `visit_overdue`, `ae_deadline_approaching`, `ae_deadline_breached`, `milestone_due` (ethics/CTRI), `monitoring_overdue`, `data_quality` (missing/inconsistent/duplicate/impossible values), `protocol_deviation` (missed/out-of-window visit, missing required assessment). Alerts are idempotent (rule_key + entity_ref unique while open) and role-routed (PV sees safety, coordinators see visits, admin sees everything).
 
