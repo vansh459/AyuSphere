@@ -3,6 +3,12 @@ import { requireActor, withError } from "@/lib/actor";
 import { getDb } from "@/db";
 import { users } from "@/db/schema";
 import { createUser, setUserActive } from "@/services/users";
+import {
+  getAiSettingsView,
+  saveAiSettings,
+  type AiSettingsView,
+} from "@/services/settings";
+import { defaultModelFor } from "@/lib/ai/provider";
 import { ROLES } from "@/lib/rbac";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,11 +27,29 @@ export default async function SettingsPage(props: {
   const sp = await props.searchParams;
 
   let rows: (typeof users.$inferSelect)[] = [];
+  let ai: AiSettingsView = { provider: null, model: null, keySet: false, source: "none" };
   let dbError = false;
   try {
-    rows = await getDb().select().from(users).orderBy(users.email);
+    const db = getDb();
+    rows = await db.select().from(users).orderBy(users.email);
+    ai = await getAiSettingsView(db);
   } catch {
     dbError = true;
+  }
+
+  async function saveAi(formData: FormData) {
+    "use server";
+    const actor = await requireActor("users.manage");
+    try {
+      await saveAiSettings(getDb(), actor, {
+        provider: formData.get("provider") === "anthropic" ? "anthropic" : "gemini",
+        model: String(formData.get("model") ?? ""),
+        apiKey: String(formData.get("apiKey") ?? ""),
+      });
+    } catch (e) {
+      redirect(withError("/settings", e));
+    }
+    redirect("/settings");
   }
 
   async function addUser(formData: FormData) {
@@ -72,6 +96,68 @@ export default async function SettingsPage(props: {
         <DbErrorState />
       ) : (
         <>
+          <Card className="flex flex-col gap-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <CardTitle className="text-body font-bold">AI Model</CardTitle>
+              {ai.keySet ? (
+                <Badge tone="success">
+                  {ai.provider} · {ai.model} ·{" "}
+                  {ai.source === "env" ? "from environment" : "configured in UI"}
+                </Badge>
+              ) : (
+                <Badge tone="warning">not configured</Badge>
+              )}
+            </div>
+            <p className="opacity-70">
+              Powers Doctor Note extraction and the AI Copilot. Settings saved
+              here override environment variables; the API key is stored
+              server-side and never displayed again.
+            </p>
+            <form action={saveAi} className="grid grid-cols-1 items-end gap-3 md:grid-cols-4">
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="provider">Provider</Label>
+                <select
+                  id="provider"
+                  name="provider"
+                  defaultValue={ai.provider ?? "gemini"}
+                  className="h-10 rounded-[0.875rem] border border-line bg-surface px-3 outline-none focus:border-primary"
+                >
+                  <option value="gemini">Google Gemini</option>
+                  <option value="anthropic">Anthropic Claude</option>
+                </select>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="model">Model</Label>
+                <Input
+                  id="model"
+                  name="model"
+                  defaultValue={ai.model ?? defaultModelFor("gemini")}
+                  placeholder="gemini-2.5-flash"
+                  required
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="apiKey">API key</Label>
+                <Input
+                  id="apiKey"
+                  name="apiKey"
+                  type="password"
+                  autoComplete="off"
+                  placeholder={
+                    ai.source === "settings"
+                      ? "leave blank to keep current key"
+                      : "paste your API key"
+                  }
+                />
+              </div>
+              <Button type="submit">Save AI settings</Button>
+            </form>
+            <p className="opacity-50">
+              Model examples — Gemini: gemini-2.5-flash, gemini-2.5-pro ·
+              Claude: claude-sonnet-5, claude-haiku-4-5-20251001
+            </p>
+          </Card>
+
           <Card className="flex flex-col gap-4">
             <CardTitle className="text-body font-bold">Create user</CardTitle>
             <form action={addUser} className="grid grid-cols-1 items-end gap-3 md:grid-cols-5">

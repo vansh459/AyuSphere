@@ -6,7 +6,11 @@ import { can } from "@/lib/rbac";
 import { getDb } from "@/db";
 import { auditEvents } from "@/db/schema";
 import { answerQuestion } from "@/services/copilot";
-import { createClaudeTextClient } from "@/lib/ai/claude-text";
+import {
+  NO_AI_MESSAGE,
+  createTextClientFor,
+  getAiConfig,
+} from "@/lib/ai/provider";
 
 const bodySchema = z.object({ question: z.string().min(3).max(500) });
 
@@ -18,24 +22,22 @@ export async function POST(req: Request) {
   if (!can(session.user.role, "copilot.use")) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return NextResponse.json(
-      { error: "ANTHROPIC_API_KEY not configured" },
-      { status: 501 },
-    );
+  const db = getDb();
+  const cfg = await getAiConfig(db);
+  if (!cfg) {
+    return NextResponse.json({ error: NO_AI_MESSAGE }, { status: 501 });
   }
   const parsed = bodySchema.safeParse(await req.json());
   if (!parsed.success) {
     return NextResponse.json({ error: "invalid question" }, { status: 400 });
   }
 
-  const db = getDb();
   try {
     const result = await answerQuestion(
       db,
       { id: session.user.id, role: session.user.role },
       parsed.data.question,
-      createClaudeTextClient(),
+      createTextClientFor(cfg),
     );
     // every Copilot exchange is logged (architecture.md §9)
     await db.insert(auditEvents).values({

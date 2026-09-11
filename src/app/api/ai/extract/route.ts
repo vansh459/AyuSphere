@@ -7,7 +7,11 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { can } from "@/lib/rbac";
 import { getDb } from "@/db";
-import { createClaudeVisionClient } from "@/lib/ai/claude";
+import {
+  NO_AI_MESSAGE,
+  createVisionClientFor,
+  getAiConfig,
+} from "@/lib/ai/provider";
 import { startExtraction } from "@/services/extractions";
 
 export const runtime = "nodejs";
@@ -23,11 +27,10 @@ export async function POST(req: Request) {
   if (!can(session.user.role, "crf.enter")) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return NextResponse.json(
-      { error: "ANTHROPIC_API_KEY not configured" },
-      { status: 501 },
-    );
+  const db = getDb();
+  const cfg = await getAiConfig(db);
+  if (!cfg) {
+    return NextResponse.json({ error: NO_AI_MESSAGE }, { status: 501 });
   }
 
   const form = await req.formData();
@@ -58,10 +61,10 @@ export async function POST(req: Request) {
 
   try {
     const extraction = await startExtraction(
-      getDb(),
+      db,
       { id: session.user.id, role: session.user.role },
       { visitId, blobUrl },
-      createClaudeVisionClient(),
+      createVisionClientFor(cfg),
     );
     return NextResponse.json({ extraction });
   } catch (err) {

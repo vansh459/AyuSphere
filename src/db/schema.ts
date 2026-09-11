@@ -399,6 +399,16 @@ export const alerts = pgTable(
   ],
 );
 
+/** Runtime app configuration (e.g. AI provider/model/key) — admin-managed. */
+export const appSettings = pgTable("app_settings", {
+  key: text("key").primaryKey(),
+  value: jsonb("value").notNull(),
+  updatedBy: uuid("updated_by"),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 /** Insert-only (D-010). The app role gets no UPDATE/DELETE grant. */
 export const auditEvents = pgTable("audit_events", {
   id: uuid("id").primaryKey().defaultRandom(),

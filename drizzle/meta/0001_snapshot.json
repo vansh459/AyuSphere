@@ -1,0 +1,1681 @@
+{
+  "id": "212ef615-478d-46bd-8457-11b0eb8f251d",
+  "prevId": "fb367561-6d14-4658-962d-970691a6d39f",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.adverse_events": {
+      "name": "adverse_events",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "participant_id": {
+          "name": "participant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "term": {
+          "name": "term",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "meddra_code": {
+          "name": "meddra_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "whodrug_code": {
+          "name": "whodrug_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "onset_date": {
+          "name": "onset_date",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "seriousness": {
+          "name": "seriousness",
+          "type": "ae_seriousness",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "severity": {
+          "name": "severity",
+          "type": "ae_severity",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "outcome": {
+          "name": "outcome",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "causality": {
+          "name": "causality",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "narrative": {
+          "name": "narrative",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reporting_deadline": {
+          "name": "reporting_deadline",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "detailed_report_deadline": {
+          "name": "detailed_report_deadline",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reported_at": {
+          "name": "reported_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "ae_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'open'"
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "adverse_events_participant_id_participants_id_fk": {
+          "name": "adverse_events_participant_id_participants_id_fk",
+          "tableFrom": "adverse_events",
+          "tableTo": "participants",
+          "columnsFrom": [
+            "participant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.ae_actions": {
+      "name": "ae_actions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "ae_id": {
+          "name": "ae_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "actor_id": {
+          "name": "actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "at": {
+          "name": "at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "ae_actions_ae_id_adverse_events_id_fk": {
+          "name": "ae_actions_ae_id_adverse_events_id_fk",
+          "tableFrom": "ae_actions",
+          "tableTo": "adverse_events",
+          "columnsFrom": [
+            "ae_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.alerts": {
+      "name": "alerts",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "trial_id": {
+          "name": "trial_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "site_id": {
+          "name": "site_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rule_key": {
+          "name": "rule_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entity_ref": {
+          "name": "entity_ref",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "severity": {
+          "name": "severity",
+          "type": "alert_severity",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "message": {
+          "name": "message",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "alert_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'open'"
+        },
+        "acknowledged_by": {
+          "name": "acknowledged_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "resolved_at": {
+          "name": "resolved_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "alert_rule_entity_open": {
+          "name": "alert_rule_entity_open",
+          "columns": [
+            {
+              "expression": "rule_key",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "entity_ref",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"alerts\".\"status\" = 'open'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "alerts_trial_id_trials_id_fk": {
+          "name": "alerts_trial_id_trials_id_fk",
+          "tableFrom": "alerts",
+          "tableTo": "trials",
+          "columnsFrom": [
+            "trial_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "alerts_site_id_sites_id_fk": {
+          "name": "alerts_site_id_sites_id_fk",
+          "tableFrom": "alerts",
+          "tableTo": "sites",
+          "columnsFrom": [
+            "site_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.app_settings": {
+      "name": "app_settings",
+      "schema": "",
+      "columns": {
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "value": {
+          "name": "value",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_by": {
+          "name": "updated_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.audit_events": {
+      "name": "audit_events",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "actor_id": {
+          "name": "actor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "actor_role": {
+          "name": "actor_role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entity_type": {
+          "name": "entity_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entity_id": {
+          "name": "entity_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "before": {
+          "name": "before",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "after": {
+          "name": "after",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "request_id": {
+          "name": "request_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "at": {
+          "name": "at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.crf_entries": {
+      "name": "crf_entries",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "visit_id": {
+          "name": "visit_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "template_id": {
+          "name": "template_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "data": {
+          "name": "data",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "status": {
+          "name": "status",
+          "type": "crf_entry_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'draft'"
+        },
+        "source": {
+          "name": "source",
+          "type": "entry_source",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'manual'"
+        },
+        "extraction_id": {
+          "name": "extraction_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "supersedes_id": {
+          "name": "supersedes_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "entered_by": {
+          "name": "entered_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "approved_by": {
+          "name": "approved_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "approved_at": {
+          "name": "approved_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "crf_entries_visit_id_visits_id_fk": {
+          "name": "crf_entries_visit_id_visits_id_fk",
+          "tableFrom": "crf_entries",
+          "tableTo": "visits",
+          "columnsFrom": [
+            "visit_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "crf_entries_template_id_crf_templates_id_fk": {
+          "name": "crf_entries_template_id_crf_templates_id_fk",
+          "tableFrom": "crf_entries",
+          "tableTo": "crf_templates",
+          "columnsFrom": [
+            "template_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.crf_templates": {
+      "name": "crf_templates",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "trial_id": {
+          "name": "trial_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "visit_type": {
+          "name": "visit_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "fields": {
+          "name": "fields",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "crf_templates_trial_id_trials_id_fk": {
+          "name": "crf_templates_trial_id_trials_id_fk",
+          "tableFrom": "crf_templates",
+          "tableTo": "trials",
+          "columnsFrom": [
+            "trial_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.documents": {
+      "name": "documents",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "trial_id": {
+          "name": "trial_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "document_kind",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "blob_url": {
+          "name": "blob_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "uploaded_by": {
+          "name": "uploaded_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "documents_trial_id_trials_id_fk": {
+          "name": "documents_trial_id_trials_id_fk",
+          "tableFrom": "documents",
+          "tableTo": "trials",
+          "columnsFrom": [
+            "trial_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.extractions": {
+      "name": "extractions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "visit_id": {
+          "name": "visit_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "blob_url": {
+          "name": "blob_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "image_quality": {
+          "name": "image_quality",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "raw_output": {
+          "name": "raw_output",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "mapped_fields": {
+          "name": "mapped_fields",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "validation_flags": {
+          "name": "validation_flags",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "model_id": {
+          "name": "model_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "prompt_version": {
+          "name": "prompt_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "extraction_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "reviewed_by": {
+          "name": "reviewed_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reviewed_at": {
+          "name": "reviewed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "extractions_visit_id_visits_id_fk": {
+          "name": "extractions_visit_id_visits_id_fk",
+          "tableFrom": "extractions",
+          "tableTo": "visits",
+          "columnsFrom": [
+            "visit_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.milestones": {
+      "name": "milestones",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "trial_id": {
+          "name": "trial_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "milestone_kind",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "due_date": {
+          "name": "due_date",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "completed_at": {
+          "name": "completed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "milestones_trial_id_trials_id_fk": {
+          "name": "milestones_trial_id_trials_id_fk",
+          "tableFrom": "milestones",
+          "tableTo": "trials",
+          "columnsFrom": [
+            "trial_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.participants": {
+      "name": "participants",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "subject_code": {
+          "name": "subject_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "trial_site_id": {
+          "name": "trial_site_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "screening_status": {
+          "name": "screening_status",
+          "type": "screening_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "eligibility": {
+          "name": "eligibility",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "consent_status": {
+          "name": "consent_status",
+          "type": "consent_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'not_taken'"
+        },
+        "consent_date": {
+          "name": "consent_date",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "consent_document_id": {
+          "name": "consent_document_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "arm": {
+          "name": "arm",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "participant_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'screening'"
+        },
+        "enrolled_at": {
+          "name": "enrolled_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "withdrawal_reason": {
+          "name": "withdrawal_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "withdrawn_at": {
+          "name": "withdrawn_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "participants_trial_site_id_trial_sites_id_fk": {
+          "name": "participants_trial_site_id_trial_sites_id_fk",
+          "tableFrom": "participants",
+          "tableTo": "trial_sites",
+          "columnsFrom": [
+            "trial_site_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "participants_subject_code_unique": {
+          "name": "participants_subject_code_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "subject_code"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.sites": {
+      "name": "sites",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "city": {
+          "name": "city",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "state": {
+          "name": "state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "pi_user_id": {
+          "name": "pi_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.trial_sites": {
+      "name": "trial_sites",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "trial_id": {
+          "name": "trial_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "site_id": {
+          "name": "site_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "activation_status": {
+          "name": "activation_status",
+          "type": "activation_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "activated_at": {
+          "name": "activated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "enrollment_target": {
+          "name": "enrollment_target",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "monitoring_visit_due": {
+          "name": "monitoring_visit_due",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "trial_site_unique": {
+          "name": "trial_site_unique",
+          "columns": [
+            {
+              "expression": "trial_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "site_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "trial_sites_trial_id_trials_id_fk": {
+          "name": "trial_sites_trial_id_trials_id_fk",
+          "tableFrom": "trial_sites",
+          "tableTo": "trials",
+          "columnsFrom": [
+            "trial_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "trial_sites_site_id_sites_id_fk": {
+          "name": "trial_sites_site_id_sites_id_fk",
+          "tableFrom": "trial_sites",
+          "tableTo": "sites",
+          "columnsFrom": [
+            "site_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.trials": {
+      "name": "trials",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "protocol_code": {
+          "name": "protocol_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ctri_number": {
+          "name": "ctri_number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "study_type": {
+          "name": "study_type",
+          "type": "study_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "phase": {
+          "name": "phase",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "intervention": {
+          "name": "intervention",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "dosage_form": {
+          "name": "dosage_form",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "target_enrollment": {
+          "name": "target_enrollment",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "trial_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'draft'"
+        },
+        "visit_plan": {
+          "name": "visit_plan",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "planned_start": {
+          "name": "planned_start",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "planned_end": {
+          "name": "planned_end",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "trials_protocol_code_unique": {
+          "name": "trials_protocol_code_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "protocol_code"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.users": {
+      "name": "users",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "password_hash": {
+          "name": "password_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "role",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "site_id": {
+          "name": "site_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "active": {
+          "name": "active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "users_email_unique": {
+          "name": "users_email_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "email"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.visits": {
+      "name": "visits",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "participant_id": {
+          "name": "participant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "template_id": {
+          "name": "template_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "visit_number": {
+          "name": "visit_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scheduled_date": {
+          "name": "scheduled_date",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "window_start": {
+          "name": "window_start",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "window_end": {
+          "name": "window_end",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "visit_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'upcoming'"
+        },
+        "completed_at": {
+          "name": "completed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "visits_participant_id_participants_id_fk": {
+          "name": "visits_participant_id_participants_id_fk",
+          "tableFrom": "visits",
+          "tableTo": "participants",
+          "columnsFrom": [
+            "participant_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "visits_template_id_crf_templates_id_fk": {
+          "name": "visits_template_id_crf_templates_id_fk",
+          "tableFrom": "visits",
+          "tableTo": "crf_templates",
+          "columnsFrom": [
+            "template_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.activation_status": {
+      "name": "activation_status",
+      "schema": "public",
+      "values": [
+        "pending",
+        "active",
+        "deactivated"
+      ]
+    },
+    "public.ae_seriousness": {
+      "name": "ae_seriousness",
+      "schema": "public",
+      "values": [
+        "ae",
+        "sae"
+      ]
+    },
+    "public.ae_severity": {
+      "name": "ae_severity",
+      "schema": "public",
+      "values": [
+        "mild",
+        "moderate",
+        "severe"
+      ]
+    },
+    "public.ae_status": {
+      "name": "ae_status",
+      "schema": "public",
+      "values": [
+        "open",
+        "under_review",
+        "reported",
+        "closed"
+      ]
+    },
+    "public.alert_severity": {
+      "name": "alert_severity",
+      "schema": "public",
+      "values": [
+        "info",
+        "warning",
+        "danger"
+      ]
+    },
+    "public.alert_status": {
+      "name": "alert_status",
+      "schema": "public",
+      "values": [
+        "open",
+        "acknowledged",
+        "resolved"
+      ]
+    },
+    "public.consent_status": {
+      "name": "consent_status",
+      "schema": "public",
+      "values": [
+        "not_taken",
+        "given",
+        "withdrawn"
+      ]
+    },
+    "public.crf_entry_status": {
+      "name": "crf_entry_status",
+      "schema": "public",
+      "values": [
+        "draft",
+        "submitted",
+        "approved",
+        "superseded"
+      ]
+    },
+    "public.document_kind": {
+      "name": "document_kind",
+      "schema": "public",
+      "values": [
+        "protocol",
+        "ethics_approval",
+        "consent_form",
+        "monitoring_report",
+        "regulatory"
+      ]
+    },
+    "public.entry_source": {
+      "name": "entry_source",
+      "schema": "public",
+      "values": [
+        "manual",
+        "extraction"
+      ]
+    },
+    "public.extraction_status": {
+      "name": "extraction_status",
+      "schema": "public",
+      "values": [
+        "pending",
+        "review",
+        "approved",
+        "rejected"
+      ]
+    },
+    "public.milestone_kind": {
+      "name": "milestone_kind",
+      "schema": "public",
+      "values": [
+        "iec_submission",
+        "iec_approval",
+        "ctri_registration",
+        "first_enrolment",
+        "last_visit",
+        "closeout"
+      ]
+    },
+    "public.participant_status": {
+      "name": "participant_status",
+      "schema": "public",
+      "values": [
+        "screening",
+        "enrolled",
+        "withdrawn",
+        "completed"
+      ]
+    },
+    "public.role": {
+      "name": "role",
+      "schema": "public",
+      "values": [
+        "pi",
+        "coordinator",
+        "monitor",
+        "ethics",
+        "pv",
+        "admin",
+        "regulator"
+      ]
+    },
+    "public.screening_status": {
+      "name": "screening_status",
+      "schema": "public",
+      "values": [
+        "pending",
+        "passed",
+        "failed"
+      ]
+    },
+    "public.study_type": {
+      "name": "study_type",
+      "schema": "public",
+      "values": [
+        "interventional",
+        "observational"
+      ]
+    },
+    "public.trial_status": {
+      "name": "trial_status",
+      "schema": "public",
+      "values": [
+        "draft",
+        "iec_review",
+        "iec_approved",
+        "ctri_registered",
+        "active",
+        "enrolment_closed",
+        "followup",
+        "closeout"
+      ]
+    },
+    "public.visit_status": {
+      "name": "visit_status",
+      "schema": "public",
+      "values": [
+        "upcoming",
+        "due",
+        "overdue",
+        "completed",
+        "missed",
+        "cancelled"
+      ]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}
