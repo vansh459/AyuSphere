@@ -1,5 +1,12 @@
-import { Pool } from "@neondatabase/serverless";
+import { Pool, neonConfig } from "@neondatabase/serverless";
+import ws from "ws";
 import { drizzle } from "drizzle-orm/neon-serverless";
+
+// Node < 22 has no global WebSocket; the Neon serverless driver needs one.
+// Vercel's runtime provides it, local Node 20 (dev/seed) does not.
+if (typeof WebSocket === "undefined") {
+  neonConfig.webSocketConstructor = ws;
+}
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { ExtractTablesWithRelations } from "drizzle-orm";
 import * as schema from "./schema";
