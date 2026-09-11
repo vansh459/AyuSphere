@@ -31,10 +31,13 @@ Demo logins (password `Demo@1234`): `pi@aiia.demo`, `coordinator@aiia.demo`,
 ## Tests (the task gates)
 
 ```bash
-pnpm test        # 143 tests: domain rules + services on PGlite + static design QA
+pnpm verify      # runs typecheck and full vitest suite
+pnpm test        # 157 tests: domain rules + services on PGlite + static design QA
 pnpm typecheck
 pnpm build
 ```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines, architecture conventions, and development setup.
 
 Every task in [`docs/tasks.md`](docs/tasks.md) shipped only after its
 test gate passed. Key suites: lifecycle state machine, ALCOA+ audit atomicity,

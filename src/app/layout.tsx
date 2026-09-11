@@ -13,7 +13,11 @@ export const metadata: Metadata = {
     "AI-assisted Clinical Research Intelligence Platform for Ayurveda — SIH26046",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en" className={`${jakarta.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">{children}</body>
