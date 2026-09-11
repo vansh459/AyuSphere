@@ -5,12 +5,14 @@
 import { and, eq, isNotNull, sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import {
+  crfTemplates,
   documents,
   milestones,
   participants,
   trialSites,
   trials,
 } from "@/db/schema";
+import { DEFAULT_CRF_FIELDS } from "@/lib/crf";
 import { withAudit, type Actor } from "@/lib/audit";
 import { assertCan } from "@/lib/rbac";
 import {
@@ -66,6 +68,16 @@ export async function createTrial(
       (["iec_submission", "iec_approval", "ctri_registration"] as const).map(
         (kind) => ({ trialId: trial.id, kind }),
       ),
+    );
+    // scaffold a default CRF template per visit-plan entry — visits must
+    // never be created template-less (browser-test finding, 2026-09-11)
+    await tx.insert(crfTemplates).values(
+      data.visitPlan.map((v) => ({
+        trialId: trial.id,
+        visitType: v.name,
+        name: `${data.protocolCode} — ${v.name} CRF`,
+        fields: DEFAULT_CRF_FIELDS,
+      })),
     );
     return {
       result: trial,

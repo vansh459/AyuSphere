@@ -3,6 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { createTestDb, type TestDb } from "./helpers/db";
 import {
   auditEvents,
+  crfTemplates,
   documents,
   milestones,
   sites,
@@ -111,6 +112,19 @@ describe("T1.2 — trial creation", () => {
       );
     expect(audit).toHaveLength(1);
     expect(audit[0].actorRole).toBe("coordinator");
+  });
+
+  it("scaffolds a default CRF template per visit-plan entry (visits are never template-less)", async () => {
+    const trial = await createTrial(db, pi, { ...INPUT, protocolCode: "AYU-103" });
+    const templates = await db
+      .select()
+      .from(crfTemplates)
+      .where(eq(crfTemplates.trialId, trial.id));
+    expect(templates.map((t) => t.visitType).sort()).toEqual(
+      ["Baseline", "Week 4"], // INPUT's visit plan
+    );
+    const fields = templates[0].fields as { name: string }[];
+    expect(fields.map((f) => f.name)).toContain("dose_mg");
   });
 
   it("monitor cannot create trials (RBAC) and nothing is written", async () => {

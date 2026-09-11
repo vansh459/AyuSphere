@@ -162,6 +162,15 @@ export default async function VisitDetailPage(props: {
         </Card>
       ) : null}
 
+      {isOpen && fields.length === 0 ? (
+        <Card>
+          <p className="text-warning font-medium">
+            No CRF template is configured for this visit type — data capture is
+            disabled until one exists for the trial.
+          </p>
+        </Card>
+      ) : null}
+
       <Card className="flex flex-col gap-3">
         <CardTitle className="text-body font-bold">
           Entries ({entries.length})

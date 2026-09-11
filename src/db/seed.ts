@@ -37,13 +37,9 @@ export const DEMO_USERS: { email: string; name: string; role: Role }[] = [
   { email: "regulator@aiia.demo", name: "CDSCO Observer", role: "regulator" },
 ];
 
-const VITALS_FIELDS = [
-  { name: "sbp", label: "Systolic BP", type: "number", unit: "mmHg", min: 70, max: 250, required: true, cdashVar: "VSORRES_SYSBP" },
-  { name: "dbp", label: "Diastolic BP", type: "number", unit: "mmHg", min: 40, max: 150, required: true, cdashVar: "VSORRES_DIABP" },
-  { name: "pulse", label: "Pulse", type: "number", unit: "bpm", min: 30, max: 200, required: true, cdashVar: "VSORRES_PULSE" },
-  { name: "dose_mg", label: "Intervention dose", type: "number", unit: "mg", min: 0, max: 2000, required: true, cdashVar: "EXDOSE" },
-  { name: "notes", label: "Clinical notes", type: "text", required: false, cdashVar: "CONOTES" },
-] as const;
+import { DEFAULT_CRF_FIELDS } from "@/lib/crf";
+
+const VITALS_FIELDS = DEFAULT_CRF_FIELDS;
 
 export type SeedSummary = {
   users: number;

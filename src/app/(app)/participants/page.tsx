@@ -25,12 +25,14 @@ export default async function ParticipantsPage(props: {
 }) {
   await requireActor("participant.manage");
   const sp = await props.searchParams;
+  const trialFilter = typeof sp.trial === "string" ? sp.trial : "";
 
   let rows: {
     p: typeof participants.$inferSelect;
     protocolCode: string;
     siteName: string;
   }[] = [];
+  let protocolCodes: string[] = [];
   let activeSites: { id: string; label: string }[] = [];
   let dbError = false;
   try {
@@ -46,6 +48,10 @@ export default async function ParticipantsPage(props: {
       .innerJoin(trials, eq(trialSites.trialId, trials.id))
       .innerJoin(sites, eq(trialSites.siteId, sites.id))
       .orderBy(participants.subjectCode);
+    protocolCodes = [...new Set(rows.map((r) => r.protocolCode))].sort();
+    if (trialFilter) {
+      rows = rows.filter((r) => r.protocolCode === trialFilter);
+    }
     const ts = await db
       .select({
         id: trialSites.id,
@@ -130,6 +136,28 @@ export default async function ParticipantsPage(props: {
               <Button type="submit">Add (code auto-generated)</Button>
             </form>
           </Card>
+
+          <form method="get" className="flex flex-wrap items-center gap-2">
+            <span className="microlabel">Filter by trial</span>
+            <select
+              name="trial"
+              defaultValue={trialFilter}
+              className="h-9 rounded-xl border border-line bg-surface px-3 outline-none focus:border-primary"
+            >
+              <option value="">All trials ({protocolCodes.length})</option>
+              {protocolCodes.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+            <Button size="sm" variant="outline" type="submit">
+              Apply
+            </Button>
+            <span className="opacity-50">
+              {rows.length} participant{rows.length === 1 ? "" : "s"}
+            </span>
+          </form>
 
           <Card className="overflow-x-auto p-0">
             <table className="w-full text-left">

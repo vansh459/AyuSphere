@@ -24,6 +24,19 @@ export function parseTemplateFields(raw: unknown): CrfField[] {
   return z.array(crfFieldSchema).parse(raw);
 }
 
+/**
+ * Default CDASH-aligned CRF field set — scaffolded for every visit-plan
+ * entry when a trial is created (and used by the seed). Trials can later
+ * get bespoke templates; visits must never end up template-less.
+ */
+export const DEFAULT_CRF_FIELDS: CrfField[] = [
+  { name: "sbp", label: "Systolic BP", type: "number", unit: "mmHg", min: 70, max: 250, required: true, cdashVar: "VSORRES_SYSBP" },
+  { name: "dbp", label: "Diastolic BP", type: "number", unit: "mmHg", min: 40, max: 150, required: true, cdashVar: "VSORRES_DIABP" },
+  { name: "pulse", label: "Pulse", type: "number", unit: "bpm", min: 30, max: 200, required: true, cdashVar: "VSORRES_PULSE" },
+  { name: "dose_mg", label: "Intervention dose", type: "number", unit: "mg", min: 0, max: 2000, required: true, cdashVar: "EXDOSE" },
+  { name: "notes", label: "Clinical notes", type: "text", required: false, cdashVar: "CONOTES" },
+];
+
 function fieldToZod(f: CrfField): z.ZodTypeAny {
   switch (f.type) {
     case "number": {

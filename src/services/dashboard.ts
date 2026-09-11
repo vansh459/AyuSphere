@@ -161,8 +161,33 @@ const ACTIVITY_LABELS: Record<string, string> = {
   "visit.complete": "Visit completed",
   "visit.missed": "Visit missed",
   "document.upload": "Document uploaded",
+  "site.create": "Site registered",
+  "site.attach": "Site attached to trial",
   "site.activate": "Site activated",
+  "copilot.query": "AI Copilot query",
+  "settings.ai_update": "AI model settings updated",
+  "user.create": "User account created",
+  "user.activate": "User account reactivated",
+  "user.deactivate": "User account deactivated",
+  "alert.acknowledge": "Alert acknowledged",
+  "extraction.quality_fail": "Note image rejected (quality)",
+  "extraction.invalid_output": "Note extraction failed validation",
+  "extraction.reject": "Note extraction rejected",
+  "crf.correct": "CRF entry corrected",
+  "participant.screen": "Screening recorded",
+  "export.fhir": "FHIR bundle exported",
+  "export.dm": "SDTM DM exported",
+  "export.ae": "SDTM AE exported",
+  "export.define": "Define-XML exported",
 };
+
+/** friendly label with a prettified fallback — raw dotted keys never render */
+export function activityLabel(action: string): string {
+  return (
+    ACTIVITY_LABELS[action] ??
+    action.replaceAll(".", " — ").replaceAll("_", " ")
+  );
+}
 
 export type Activity = { label: string; detail: string; when: string; kind: string };
 
@@ -173,7 +198,7 @@ export async function recentActivities(db: Db, limit = 4): Promise<Activity[]> {
     .orderBy(desc(auditEvents.at))
     .limit(limit);
   return rows.map((e) => ({
-    label: ACTIVITY_LABELS[e.action] ?? e.action,
+    label: activityLabel(e.action),
     detail: `${e.entityType} · by ${e.actorRole}`,
     when: relativeTime(e.at),
     kind: e.action.split(".")[0],
