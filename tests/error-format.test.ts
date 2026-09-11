@@ -40,4 +40,22 @@ describe("server-action error formatting (no raw Zod JSON in banners)", () => {
     expect(errorMessage(new Error("trial not found"))).toBe("trial not found");
     expect(errorMessage("weird")).toBe("The action failed.");
   });
+
+  it("never leaks raw SQL from database errors; maps unique violations", () => {
+    const dup = new Error(
+      'Failed query: insert into "trial_sites" ("id", "trial_id") values (default, $1)',
+    );
+    (dup as { cause?: unknown }).cause = Object.assign(
+      new Error('duplicate key value violates unique constraint "trial_site_unique"'),
+      { code: "23505" },
+    );
+    const msg = errorMessage(dup);
+    expect(msg).toBe("That record already exists — this combination must be unique.");
+    expect(msg).not.toContain("insert into");
+
+    const generic = new Error("Failed query: select 1");
+    expect(errorMessage(generic)).toBe(
+      "Database error — the change was not saved. Please retry.",
+    );
+  });
 });

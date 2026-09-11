@@ -28,7 +28,21 @@ export function errorMessage(e: unknown): string {
       })
       .join(" · ");
   }
-  return e instanceof Error ? e.message : "The action failed.";
+  if (e instanceof Error) {
+    // drizzle embeds the failing SQL in its message — never show that
+    if (e.name === "DrizzleQueryError" || e.message.startsWith("Failed query:")) {
+      const cause = (e as { cause?: Error & { code?: string } }).cause;
+      if (cause?.code === "23505") {
+        return "That record already exists — this combination must be unique.";
+      }
+      if (cause?.code === "23503") {
+        return "That change conflicts with related records and was not saved.";
+      }
+      return "Database error — the change was not saved. Please retry.";
+    }
+    return e.message;
+  }
+  return "The action failed.";
 }
 
 /** encode an error for the ?error= banner redirect pattern */

@@ -44,6 +44,21 @@ export async function attachSiteToTrial(
 ) {
   assertCan(actor.role, "site.manage");
   const data = attachSiteInput.parse(input);
+  const [existing] = await db
+    .select({ id: trialSites.id })
+    .from(trialSites)
+    .where(
+      and(
+        eq(trialSites.trialId, data.trialId),
+        eq(trialSites.siteId, data.siteId),
+      ),
+    )
+    .limit(1);
+  if (existing) {
+    throw new Error(
+      "This site is already attached to that trial — adjust its target or activation instead.",
+    );
+  }
   return withAudit(db, actor, "site.attach", async (tx) => {
     const [ts] = await tx.insert(trialSites).values(data).returning();
     return {
