@@ -11,6 +11,14 @@ export const metadata: Metadata = {
   title: "AyuSphere",
   description:
     "AI-assisted Clinical Research Intelligence Platform for Ayurveda — SIH26046",
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/icon.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon.ico" },
+    ],
+    apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
+  },
 };
 
 export default function RootLayout({
