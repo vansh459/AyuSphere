@@ -2,9 +2,15 @@
  * Trial service — create + lifecycle transitions (workflow.md §2).
  * RBAC-checked, state-machine-guarded, fully audited.
  */
-import { and, eq, isNotNull } from "drizzle-orm";
+import { and, eq, isNotNull, sql } from "drizzle-orm";
 import type { Db } from "@/db";
-import { documents, milestones, trialSites, trials } from "@/db/schema";
+import {
+  documents,
+  milestones,
+  participants,
+  trialSites,
+  trials,
+} from "@/db/schema";
 import { withAudit, type Actor } from "@/lib/audit";
 import { assertCan } from "@/lib/rbac";
 import {
@@ -60,6 +66,26 @@ export async function createTrial(
       after: { protocolCode: trial.protocolCode, status: trial.status },
     };
   });
+}
+
+/**
+ * Trial list with enrolment/site counts. Join + group-by, NOT correlated
+ * raw-SQL subqueries: with a single-table FROM drizzle emits unqualified
+ * column names, so `${trials.id}` inside a subquery renders as bare "id"
+ * and Postgres rejects it as ambiguous (prod bug, 2026-09-11).
+ */
+export async function listTrialsWithCounts(db: Db) {
+  return db
+    .select({
+      trial: trials,
+      enrolled: sql<number>`(count(distinct ${participants.id}) filter (where ${participants.status} = 'enrolled'))::int`,
+      siteCount: sql<number>`count(distinct ${trialSites.id})::int`,
+    })
+    .from(trials)
+    .leftJoin(trialSites, eq(trialSites.trialId, trials.id))
+    .leftJoin(participants, eq(participants.trialSiteId, trialSites.id))
+    .groupBy(trials.id)
+    .orderBy(trials.createdAt);
 }
 
 export class TransitionError extends Error {

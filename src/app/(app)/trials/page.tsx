@@ -1,8 +1,7 @@
 import Link from "next/link";
-import { sql } from "drizzle-orm";
 import { requireActor } from "@/lib/actor";
 import { getDb } from "@/db";
-import { participants, trialSites, trials } from "@/db/schema";
+import { listTrialsWithCounts } from "@/services/trials";
 import { Card } from "@/components/ui/card";
 import {
   DbErrorState,
@@ -19,25 +18,12 @@ export default async function TrialsPage(props: {
   await requireActor("trial.manage");
   const sp = await props.searchParams;
 
-  let rows: {
-    trial: typeof trials.$inferSelect;
-    enrolled: number;
-    siteCount: number;
-  }[] = [];
+  let rows: Awaited<ReturnType<typeof listTrialsWithCounts>> = [];
   let dbError = false;
   try {
-    const db = getDb();
-    rows = await db
-      .select({
-        trial: trials,
-        enrolled: sql<number>`(select count(*)::int from ${participants} p
-          join ${trialSites} ts on p.trial_site_id = ts.id
-          where ts.trial_id = ${trials.id} and p.status = 'enrolled')`,
-        siteCount: sql<number>`(select count(*)::int from ${trialSites} ts where ts.trial_id = ${trials.id})`,
-      })
-      .from(trials)
-      .orderBy(trials.createdAt);
-  } catch {
+    rows = await listTrialsWithCounts(getDb());
+  } catch (e) {
+    console.error("[trials] list query failed:", e);
     dbError = true;
   }
 

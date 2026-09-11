@@ -255,14 +255,25 @@ export async function aiInsights(db: Db): Promise<Insight[]> {
     .groupBy(alerts.ruleKey);
   const byRule = Object.fromEntries(openAlerts.map((a) => [a.ruleKey, a.n]));
 
-  const [recruit] = await db
+  // two plain queries — a correlated subquery here silently resolved "id"
+  // to participants.id (wrong join), always yielding 0
+  const [recruitTarget] = await db
     .select({
-      enrolled: sql<number>`coalesce(sum((select count(*)::int from ${participants} p
-        where p.trial_site_id = ${trialSites.id} and p.status = 'enrolled')), 0)::int`,
       target: sql<number>`coalesce(sum(${trialSites.enrollmentTarget}), 0)::int`,
     })
     .from(trialSites)
     .where(eq(trialSites.activationStatus, "active"));
+  const [recruitEnrolled] = await db
+    .select({ enrolled: sql<number>`count(*)::int` })
+    .from(participants)
+    .innerJoin(trialSites, eq(participants.trialSiteId, trialSites.id))
+    .where(
+      sql`${participants.status} = 'enrolled' and ${trialSites.activationStatus} = 'active'`,
+    );
+  const recruit = {
+    target: recruitTarget.target,
+    enrolled: recruitEnrolled.enrolled,
+  };
 
   const [aeReview] = await db
     .select({ n: sql<number>`count(*)::int` })

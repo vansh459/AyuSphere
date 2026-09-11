@@ -70,6 +70,8 @@ async function openSafetyEvents(db: Db, actor: Actor) {
 }
 
 async function trialPortfolio(db: Db) {
+  // join + group-by (single-table FROM renders unqualified columns, which
+  // makes correlated raw-SQL subqueries ambiguous — see listTrialsWithCounts)
   return db
     .select({
       id: trials.id,
@@ -77,11 +79,12 @@ async function trialPortfolio(db: Db) {
       title: trials.title,
       status: trials.status,
       targetEnrollment: trials.targetEnrollment,
-      enrolled: sql<number>`(select count(*)::int from ${participants} p
-        join ${trialSites} ts on p.trial_site_id = ts.id
-        where ts.trial_id = ${trials.id} and p.status = 'enrolled')`,
+      enrolled: sql<number>`(count(distinct ${participants.id}) filter (where ${participants.status} = 'enrolled'))::int`,
     })
-    .from(trials);
+    .from(trials)
+    .leftJoin(trialSites, eq(trialSites.trialId, trials.id))
+    .leftJoin(participants, eq(participants.trialSiteId, trialSites.id))
+    .groupBy(trials.id);
 }
 
 // ---------- intent routing ----------
