@@ -1,26 +1,93 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+ * AyuSphere design tokens — docs/technology.md §2
+ * ONE font, TWO text sizes (D-008) · token-only colors (D-015)
+ * glass = chrome, clay = content (D-007)
+ */
+
+@theme {
+  /* Typography — Plus Jakarta Sans only */
+  --font-sans: var(--font-jakarta), system-ui, sans-serif;
+
+  /* Exactly two text sizes. `initial` wipes every Tailwind default
+     (text-xs … text-9xl no longer exist). */
+  --text-*: initial;
+  --text-body: 0.875rem;
+  --text-body--line-height: 1.6;
+  --text-heading: 1.5rem;
+  --text-heading--line-height: 1.25;
+
+  /* Color tokens — status colors mean status, never decoration */
+  --color-*: initial;
+  --color-primary: #1b7a43;
+  --color-primary-soft: #e8f4ec;
+  --color-primary-deep: #0f5230;
+  --color-bg: #f7f6f3;
+  --color-surface: #ffffff;
+  --color-ink: #1c1e1d;
+  --color-line: #e5e3de;
+  --color-success: #1b7a43;
+  --color-warning: #b7791f;
+  --color-danger: #c0392b;
+  --color-info: #2563eb;
+  --color-white: #ffffff;
+  --color-black: #000000;
+  --color-transparent: transparent;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  body {
+    margin: 0;
+    background-color: var(--color-bg);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    /* faint green radial glow so glass surfaces read (technology.md §2.4) */
+    background-image: radial-gradient(
+      60rem 40rem at 85% -10%,
+      rgba(27, 122, 67, 0.06),
+      transparent
+    );
+    background-attachment: fixed;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Surface language — defined once, never hand-rolled (D-007) */
+
+@utility glass {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 1rem;
+  box-shadow: 0 8px 32px rgba(28, 30, 29, 0.08);
+}
+
+@utility clay {
+  background: var(--color-surface);
+  border-radius: 1.25rem;
+  box-shadow:
+    0 2px 4px rgba(28, 30, 29, 0.04),
+    0 12px 24px rgba(28, 30, 29, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+@utility clay-btn {
+  background: var(--color-surface);
+  border-radius: 0.875rem;
+  box-shadow:
+    0 1px 2px rgba(28, 30, 29, 0.05),
+    0 6px 12px rgba(28, 30, 29, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+/* Micro-label: the only sanctioned "third look" — still body size (D-008) */
+@utility microlabel {
+  font-size: var(--text-body);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 500;
+  opacity: 0.7;
 }
