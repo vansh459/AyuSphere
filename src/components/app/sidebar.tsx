@@ -55,7 +55,7 @@ export function Sidebar({ items }: { items: NavItem[] }) {
         </div>
       </div>
 
-      <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-3 pb-4">
+      <nav className="scroll-dark flex flex-1 flex-col gap-0.5 overflow-y-auto px-3 pb-4">
         {items.map((item) => {
           const Icon = ICONS[item.icon];
           const active =
