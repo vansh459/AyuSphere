@@ -28,14 +28,22 @@ export const visitPlanItem = z.object({
 });
 
 export const createTrialInput = z.object({
-  protocolCode: z.string().min(3).max(40),
-  title: z.string().min(5),
+  protocolCode: z
+    .string()
+    .min(3, "needs at least 3 characters (e.g. AYU-004)")
+    .max(40, "keep it under 40 characters"),
+  title: z.string().min(5, "needs at least 5 characters — describe the study"),
   studyType: z.enum(["interventional", "observational"]),
   phase: z.string().optional(),
-  intervention: z.string().min(2),
+  intervention: z.string().min(2, "name the Ayurveda intervention"),
   dosageForm: z.string().optional(),
-  targetEnrollment: z.number().int().positive(),
-  visitPlan: z.array(visitPlanItem).min(1),
+  targetEnrollment: z
+    .number()
+    .int("must be a whole number")
+    .positive("must be greater than zero"),
+  visitPlan: z
+    .array(visitPlanItem)
+    .min(1, "add at least one visit row (name + day offset + window)"),
 });
 
 export type CreateTrialInput = z.infer<typeof createTrialInput>;

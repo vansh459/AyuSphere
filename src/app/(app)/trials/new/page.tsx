@@ -59,7 +59,7 @@ export default async function NewTrialPage(props: {
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="flex flex-col gap-2">
               <Label htmlFor="protocolCode">Protocol code</Label>
-              <Input id="protocolCode" name="protocolCode" placeholder="AYU-004" required />
+              <Input id="protocolCode" name="protocolCode" placeholder="AYU-004" minLength={3} required />
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="targetEnrollment">Target enrolment</Label>
@@ -68,7 +68,7 @@ export default async function NewTrialPage(props: {
           </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="title">Title</Label>
-            <Input id="title" name="title" placeholder="Intervention in condition — study type" required />
+            <Input id="title" name="title" placeholder="Intervention in condition — study type" minLength={5} required />
           </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
             <div className="flex flex-col gap-2">
@@ -88,7 +88,7 @@ export default async function NewTrialPage(props: {
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="intervention">Ayurveda intervention</Label>
-              <Input id="intervention" name="intervention" placeholder="Ashwagandha extract" required />
+              <Input id="intervention" name="intervention" placeholder="Ashwagandha extract" minLength={2} required />
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="dosageForm">Dosage form</Label>
