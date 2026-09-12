@@ -70,3 +70,9 @@ Legend: ☐ pending · ◐ in progress · ✅ done (gate passed)
 | T5.7 | Documents: versioned upload (Blob or data-URL fallback) + library | `pnpm build` + full suite green | ✅ |
 | T5.8 | Settings: user create/deactivate (audited) | `pnpm build` + full suite green | ✅ |
 | T5.9 | Dashboard: live portfolio KPIs with role-aware click-throughs | `pnpm build` + full suite green | ✅ |
+
+## Phase 6 — Real registry data (D-021)
+
+| # | Task | Test gate | Status |
+|---|---|---|---|
+| T6.1 | Scrape real Ayurveda trial metadata from CTRI (crawl4ai, pip-only, polite sequential crawl of public trial views; CAPTCHA-gated search untouched) + `seedReal` integration: idempotent trial insert, CRF templates per visit-plan entry, sites from scraped states, milestones, synthetic participants (faker, deterministic) for first ~6 trials + `pnpm db:seed:real` CLI with Neon DNS workaround | `tests/seed-real.test.ts`: >0 trials, CTRI number format, template coverage (no template-less visits), synthetic-participant bounds (5-15, ≤6 trials), determinism, idempotency; `pnpm typecheck` + full suite + `pnpm build` green | ✅ |

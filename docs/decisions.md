@@ -167,6 +167,14 @@ Related docs: [development-plan.md](development-plan.md) · [architecture.md](ar
 - **Rationale:** User directive (each task completes when it passes minimum tests, then proceed). Vitest is the fastest TS-native runner and shares the Vite pipeline.
 - **Consequences:** `docs/tasks.md` is the live task board — each task lists its test gate and status. A red test blocks progression, not just merging.
 
+## D-021 — Real CTRI registry metadata for trials; participants stay synthetic
+
+- **Date:** 2026-09-12
+- **Decision:** Trial-level seed data now comes from REAL public records of the Clinical Trials Registry – India (ctri.nic.in): Ayurveda trials scraped by `scripts/scrape/ctri_scrape.py` using the **crawl4ai** Python library (pip-only install, `crawl4ai-setup` for its Playwright browser — no Docker, honoring D-019). Only public registry METADATA is taken: title, CTRI number, study type, phase, intervention names, target sample size, sponsor, health condition, site names/states. CTRI's keyword search is CAPTCHA-gated, so the scraper walks the public read-only trial views (`pmaindet2.php` with base64 `EncHid` ids, descending from the newest registrations) sequentially with a politeness delay and filters Type of Study = Ayurveda. `src/db/seed-real.ts` (`pnpm db:seed:real`) inserts these idempotently (existing ctriNumbers skipped) alongside the demo seed. **All participant-level data remains synthetic** (faker, fixed seed) per D-016 — the scraper never extracts PI names, contacts, or any person-level fields.
+- **Alternatives:** Keep fully fabricated trial metadata (D-016 status quo); WHO ICTRP mirror; CAPTCHA-solving form automation (rejected — bypassing the registry's bot gate).
+- **Rationale:** Real CTRI registration numbers and titles make the demo credible to domain judges while staying inside the SIH problem statement's DPDP mandate: registry metadata is public by design; participant data must be synthetic/de-identified.
+- **Consequences:** `src/db/data/ctri_trials.json` is a committed snapshot (source + scraped_at recorded). Re-scraping is manual and polite. Test gate: `tests/seed-real.test.ts` (CTRI number format, template coverage, synthetic-participant bounds, determinism, idempotency).
+
 ---
 
 ## Template for new decisions

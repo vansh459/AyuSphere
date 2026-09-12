@@ -1,0 +1,393 @@
+{
+  "source": "ctri.nic.in public registry",
+  "scraped_at": "2026-09-12T07:39:07.427706+00:00",
+  "method": "crawl4ai AsyncWebCrawler over public read-only trial views (pmaindet2.php, base64 EncHid ids, descending), filtered to Type of Study = Ayurveda; search forms are CAPTCHA-gated so no form automation was used",
+  "note": "Public trial registry metadata only. No person-level data was extracted or stored.",
+  "trial_count": 24,
+  "trials": [
+    {
+      "ctri_number": "CTRI/2026/09/117131",
+      "title": "Comparison of shatapushpa taila matrabasti with tila taila matrabasti in the management of kashtartava or primary dysmenorrhea",
+      "study_type": "interventional",
+      "phase": "Phase 2/ Phase 3",
+      "intervention": "Shatapushpa taila; mAtrAbastiH, मात्राबस्तिः",
+      "target_sample_size": 138,
+      "sponsor": "Sonali Ganguly",
+      "health_condition": "(1) ICD-10 Condition: N944||Primary dysmenorrhea. Ayurveda Condition: YONIROGAH/YONI-VYAPADAH,",
+      "sites": [
+        {
+          "name": "Mahatma Gandhi Ayurved College Hospital and Research Centre,Wardha",
+          "state": "Maharashtra"
+        }
+      ]
+    },
+    {
+      "ctri_number": "CTRI/2026/09/117332",
+      "title": "A clinical study to evaluate the safety and efficacy of tab Endo-HYLM, a herbomineral formulation in the management of female patients with endometrioma",
+      "study_type": "interventional",
+      "phase": "Phase 1/ Phase 2",
+      "intervention": "Endo-HYLM",
+      "target_sample_size": 70,
+      "sponsor": "Department of Prasuti Tantra, Faculty of Ayurveda , Institute of Medical Science BHU Varanasi",
+      "health_condition": "(1) ICD-10 Condition: N801||Endometriosis of ovary. Ayurveda Condition: GRANTHIBUTA-ARTAVADUSHTIH,",
+      "sites": [
+        {
+          "name": "Sir Sundarlal Hospital BHU Varanasi",
+          "state": "Uttar Pradesh"
+        }
+      ]
+    },
+    {
+      "ctri_number": "CTRI/2026/09/117253",
+      "title": "A Study Comparing Two Ayurvedic Ghee Preparations Prapoundarikadi Ghrita and Jatyadi Ghrita for Healing Dusta Vrana in Adults",
+      "study_type": "interventional",
+      "phase": null,
+      "intervention": "Prapoundarikadi Ghrita",
+      "target_sample_size": 40,
+      "sponsor": "Darshan N",
+      "health_condition": "(1) ICD-10 Condition: L978||Non-pressure chronic ulcer of other part of lower leg. Ayurveda Condition: DUSHTAVRANAH,",
+      "sites": [
+        {
+          "name": "Ramakrishna Ayurvedic Medical College Hospital and Research Cent",
+          "state": "Karnataka"
+        }
+      ]
+    },
+    {
+      "ctri_number": "CTRI/2026/09/116942",
+      "title": "Pilot Clinical Evaluation of a Herbo-mineral Hair Removal Cream for Effective Hair Removal",
+      "study_type": "interventional",
+      "phase": null,
+      "intervention": "Herbo mineral hair removal cream",
+      "target_sample_size": 20,
+      "sponsor": "Research and Development cell",
+      "health_condition": "Unwanted hair growth",
+      "sites": [
+        {
+          "name": "Parul institute of Ayurved and Research college",
+          "state": "Gujarat"
+        }
+      ]
+    },
+    {
+      "ctri_number": "CTRI/2026/08/116585",
+      "title": "Role of therapeutic Emesis and Purgative treatment on female Hormones and their activity.",
+      "study_type": "interventional",
+      "phase": "Phase 2",
+      "intervention": "vamana-karma, वमन-कर्म; virecana-karma, विरेचन-कर्म",
+      "target_sample_size": 40,
+      "sponsor": "Dr Vaishnavi Basaveshwar Bhogade",
+      "health_condition": "(1) ICD-10 Condition: E282||Polycystic ovarian syndrome. Ayurveda Condition: ARTAVAKSHAYAH,",
+      "sites": [
+        {
+          "name": "KLE Ayurveda Hospital and MRC",
+          "state": "Karnataka"
+        }
+      ]
+    },
+    {
+      "ctri_number": "CTRI/2026/08/116740",
+      "title": "Role of Panchakarma treatment in Neck pain",
+      "study_type": "interventional",
+      "phase": "Phase 2",
+      "intervention": "nasyam (viShopakramaH), नस्यम् (विषोपक्रमः)",
+      "target_sample_size": 40,
+      "sponsor": "Dr Avantika Pal",
+      "health_condition": "(1) ICD-10 Condition: M478||Other spondylosis. Ayurveda Condition: MANYASTAMBAH,",
+      "sites": [
+        {
+          "name": "KLE Ayurveda Hospital and MRC",
+          "state": "Karnataka"
+        }
+      ]
+    },
+    {
+      "ctri_number": "CTRI/2026/09/117085",
+      "title": "Role of Panchakarma in treating low back pain",
+      "study_type": "interventional",
+      "phase": "Phase 2/ Phase 3",
+      "intervention": "piNDasvedaH, पिण्डस्वेदः",
+      "target_sample_size": 45,
+      "sponsor": "Dr Vaishnavi Soni",
+      "health_condition": "(1) ICD-10 Condition: M545||Low back pain. Ayurveda Condition: VATAVYADHIH,",
+      "sites": [
+        {
+          "name": "KLE Ayurveda Hospital and MRC",
+          "state": "Karnataka"
+        }
+      ]
+    },
+    {
+      "ctri_number": "CTRI/2026/09/117235",
+      "title": "A clinical trial to evaluate the effect of Karanjadi Ghrita in the management of diaper rash in children",
+      "study_type": "interventional",
+      "phase": "Phase 2/ Phase 3",
+      "intervention": "karanjadi ghrita",
+      "target_sample_size": 34,
+      "sponsor": "Kle Ayurveda Hospital",
+      "health_condition": "(1) ICD-10 Condition: L22||Diaper dermatitis. Ayurveda Condition: AHIPUTANA/AHIPUTANAKAH,",
+      "sites": [
+        {
+          "name": "Kle Ayurveda Hospital",
+          "state": "Karnataka"
+        }
+      ]
+    },
+    {
+      "ctri_number": "CTRI/2026/09/117014",
+      "title": "An Ayurvedic Approach to the Management of Eczema a Clinical Study",
+      "study_type": "interventional",
+      "phase": null,
+      "intervention": "ARAGWADHAMRUTADI KASHAYA; YASHDAMRUTA MALAHARA",
+      "target_sample_size": 30,
+      "sponsor": "DrNRS Government Ayurvedic",
+      "health_condition": "(1) ICD-10 Condition: L309||Dermatitis, unspecified. Ayurveda Condition: VICARCIKA,",
+      "sites": [
+        {
+          "name": "Dr Achanta lakshmipathi ayurvedic hospital",
+          "state": "Andhra Pradesh"
+        }
+      ]
+    },
+    {
+      "ctri_number": "CTRI/2026/08/116719",
+      "title": "Efficacy of Bala Taila Abhyanga in Occupational Musculoskeletal Disorders among Cobblers: A Pilot Study",
+      "study_type": "interventional",
+      "phase": null,
+      "intervention": "Bala Taila; aBya~gga-karma अ3ंग-कम; Yogaraja Guggulu; Maharasnadi Kwatha; Ashwagandha Churna",
+      "target_sample_size": 15,
+      "sponsor": "Dr D Y Patil College of Ayurved and Research Centre Pimpri Pune",
+      "health_condition": "(1) ICD-10 Condition: M00-M99||Diseases of the musculoskeletal system and connective tissue. Ayurveda Condition: VATAVYADHIH,",
+      "sites": [
+        {
+          "name": "Dr D Y Patil College of Ayurvedand Research Centre Pimpri Pune 411018",
+          "state": "Maharashtra"
+        }
+      ]
+    },
+    {
+      "ctri_number": "CTRI/2026/09/116900",
+      "title": "PHALATRIKADI GHANAVATI VERSUS PHALATRIKADI GHANAVATI WITH GOKSHURADI GUGGULU IN MADHUMEHAJANYA KLAIBYA-ERECTILE DYSFUNCTION ASSOCIATED WITH DIABETES MELLITUS",
+      "study_type": "interventional",
+      "phase": "Phase 2/ Phase 3",
+      "intervention": "Phalatrikadi ghanavati; Gokshuradi guggulu",
+      "target_sample_size": 60,
+      "sponsor": "All India Institute of Ayurveda",
+      "health_condition": "(1) ICD-10 Condition: N521||Erectile dysfunction due to diseases classified elsewhere. Ayurveda Condition: MADHUMEHAH/KSHAUDRAMEHAH,",
+      "sites": [
+        {
+          "name": "All India Institute of Ayurveda,New Delhi",
+          "state": "Delhi"
+        }
+      ]
+    },
+    {
+      "ctri_number": "CTRI/2026/08/116661",
+      "title": "A study comparing Oral ayurvedic herbal medicine alone and along with medicated enema for menstrual problems.",
+      "study_type": "interventional",
+      "phase": null,
+      "intervention": "kashmari kshudrasaha churna",
+      "target_sample_size": 40,
+      "sponsor": "Dr NRS Govt Ayurvedic College",
+      "health_condition": "(1) ICD-10 Condition: N914||Secondary oligomenorrhea. Ayurveda Condition: VATAJ,",
+      "sites": [
+        {
+          "name": "Dr A.L Govt Ayurvedic Hospital",
+          "state": "Andhra Pradesh"
+        }
+      ]
+    },
+    {
+      "ctri_number": "CTRI/2026/09/117182",
+      "title": "To evaluate the skin safety and cutaneous efficacy of herbal sunscreen cream",
+      "study_type": "interventional",
+      "phase": null,
+      "intervention": "Herbal sunscreen cream; 28 Days",
+      "target_sample_size": 196,
+      "sponsor": "Dr Isha Manoj Yelambkar",
+      "health_condition": "(1) ICD-10 Condition: L00-L99||Diseases of the skin and subcutaneous tissue. Ayurveda Condition: VYANGAH, (2) ICD-10 Condition: L00-L99||Diseases of the skin and subcutaneous tissue. Ayurveda Condition: YUVANAPIDAKA (MUKHADUSHIKA), (3) ICD-10 Condition: L00-L99||Diseases of the skin and subcutaneous",
+      "sites": [
+        {
+          "name": "LRP Ayurvedic Medical College, Hospital and Research Centre Urun Islampur",
+          "state": "Maharashtra"
+        }
+      ]
+    },
+    {
+      "ctri_number": "CTRI/2026/09/117286",
+      "title": "Comparison of Grape Seed Oil and Aloe Vera Preparation with Clotrimazole for Reducing Oral Candida in Postmenopausal Women with Xerostomia",
+      "study_type": "interventional",
+      "phase": "Phase 2",
+      "intervention": "Grape seed oil with Aloe vera extract.",
+      "target_sample_size": 110,
+      "sponsor": "Dr YPavan Kumar",
+      "health_condition": ", (1) ICD-10 Condition: N951||Menopausal and female climactericstates,",
+      "sites": [
+        {
+          "name": "GITAM Dental College and Hospital",
+          "state": "Andhra Pradesh"
+        }
+      ]
+    },
+    {
+      "ctri_number": "CTRI/2026/09/117173",
+      "title": "A Comparison of Shigru Leaf Powder and Ashwagandha Root Powder for Reducing Fatigue in Patients with Diabetes",
+      "study_type": "interventional",
+      "phase": "Phase 2",
+      "intervention": "Shigru Patra Churna",
+      "target_sample_size": 80,
+      "sponsor": "National Institute of Ayurveda, Jaipur, Rajasthan- 302002",
+      "health_condition": "(1) ICD-10 Condition: R538||Other malaise and fatigue. Ayurveda Condition: KLAMAH,",
+      "sites": [
+        {
+          "name": "National Institute of Ayurveda Hospital, Jaipur",
+          "state": "Rajasthan"
+        }
+      ]
+    },
+    {
+      "ctri_number": "CTRI/2026/09/117339",
+      "title": "A Study to Compare an Ayurvedic Medicine, Tamra Bhasma with Trikatu Kashaya for Improving Blood Cholesterol Levels",
+      "study_type": "interventional",
+      "phase": "Phase 4",
+      "intervention": "Tamra Bhasam",
+      "target_sample_size": 80,
+      "sponsor": "SGT University",
+      "health_condition": "(1) ICD-10 Condition: E785||Hyperlipidemia, unspecified. Ayurveda Condition: MEDOROGAH,",
+      "sites": [
+        {
+          "name": "SGT Ayurved Hospital",
+          "state": "Haryana"
+        }
+      ]
+    },
+    {
+      "ctri_number": "CTRI/2026/08/116584",
+      "title": "Effect of an Ayurvedic Treatment on kitibha kushtha Psoriasis Symptoms and Gut Health",
+      "study_type": "interventional",
+      "phase": "Phase 2/ Phase 3",
+      "intervention": "Ayurvedic Formulation: Krishna Tila and Bakuchi Churna; Karanjabijadi Lepa; 90 Days",
+      "target_sample_size": 66,
+      "sponsor": "Banaras Hindu University",
+      "health_condition": "(1) ICD-10 Condition: L409||Psoriasis, unspecified. Ayurveda Condition: KITIBAH,",
+      "sites": [
+        {
+          "name": "OPD NO 21 and 22 Ayurveda wing Sir Sundar Lal Hospital IMS BHU Varanasi",
+          "state": "Uttar Pradesh"
+        }
+      ]
+    },
+    {
+      "ctri_number": "CTRI/2026/08/116625",
+      "title": "Role of Amritadi Kwath and Katukiadi Kwath in the treatment of Vatarakta.",
+      "study_type": "interventional",
+      "phase": "Phase 2",
+      "intervention": "Amritadi Kwath",
+      "target_sample_size": 60,
+      "sponsor": "Rajat Sagar",
+      "health_condition": "(1) ICD-10 Condition: M100||Idiopathic gout. Ayurveda Condition: VATARAKTAM,",
+      "sites": [
+        {
+          "name": "Shri Dhanwantri Ayurvedic Medical College and Research Centre",
+          "state": "Uttar Pradesh"
+        }
+      ]
+    },
+    {
+      "ctri_number": "CTRI/2026/08/116608",
+      "title": "A RCT to evaluate the efficacy of proctobliss cream and lidocaine nifedipine cream in the management of parikartika wsr to acute fissure in ano",
+      "study_type": "interventional",
+      "phase": "Phase 2",
+      "intervention": "proctobliss cream",
+      "target_sample_size": 112,
+      "sponsor": "Dr Nisha Thadani",
+      "health_condition": "(1) ICD-10 Condition: K600||Acute anal fissure. Ayurveda Condition: PARIKARTIKA,",
+      "sites": [
+        {
+          "name": "DY PATIL AYURVEDIC HOSPITAL NERUL NAVI MUMBAI",
+          "state": "Maharashtra"
+        }
+      ]
+    },
+    {
+      "ctri_number": "CTRI/2026/09/116941",
+      "title": "Study to Evaluate the Effectiveness of Kumkumadi Tail Nasya along with Eve Fresh Skinbrite Cream for the Treatment of Melasma",
+      "study_type": "interventional",
+      "phase": null,
+      "intervention": "Kumkumadi Taila; Purva Karma with Sthanik Snehan and Swedan Pradhana Karma Pratimarsha Nasya Paschata Karma warm water gargles; Eve Fresh Skinbrite Cream",
+      "target_sample_size": 30,
+      "sponsor": "PDEAs College of Ayurved and Research Centre , Nigdi , Pune 411044 Maharashtra,India",
+      "health_condition": "(1) ICD-10 Condition: L811||Chloasma. Ayurveda Condition: VYANGAH, (2) ICD-10 Condition: L811||Chloasma. Ayurveda Condition: VYANG,",
+      "sites": [
+        {
+          "name": "Ayurved Rugnalay and Snowbell Multispeciality Hospital",
+          "state": "Maharashtra"
+        }
+      ]
+    },
+    {
+      "ctri_number": "CTRI/2026/09/117425",
+      "title": "A study on Using ayurvedic medicines Kumari Asava and Amalaki Alongside Regular Care for Severe Tuberculosis",
+      "study_type": "interventional",
+      "phase": null,
+      "intervention": "Amalaki; Kumari Asava",
+      "target_sample_size": 34,
+      "sponsor": "Maharashtra University of Health Sciences Nashik",
+      "health_condition": "(1) ICD-10 Condition: A150||Tuberculosis of lung. Ayurveda Condition: RAJAY,",
+      "sites": [
+        {
+          "name": "Government Ayurved College and Hospital, Jalgaon",
+          "state": "Maharashtra"
+        }
+      ]
+    },
+    {
+      "ctri_number": "CTRI/2026/09/117133",
+      "title": "A Clinical Study to Evaluate the Effectiveness of Ayurvedic Treatment in Patients with Sciatica",
+      "study_type": "interventional",
+      "phase": "Phase 3/ Phase 4",
+      "intervention": "Eranda Sneha; Mahanarayana Taila; kaTibastiH, कटिबस्तिः; Sahachara Taila; mAtrAbastiH, मात्राबस्तिः Pradhan Karma; agnikarma, अग्निकर्म",
+      "target_sample_size": 30,
+      "sponsor": "Dr Pragneshkumar Nitinbhai Varmora",
+      "health_condition": "(1) ICD-10 Condition: M543||Sciatica. Ayurveda Condition: GRUDHRASI,",
+      "sites": [
+        {
+          "name": "S G Patel Ayurveda Hospital And Maternity Home",
+          "state": "Gujarat"
+        }
+      ]
+    },
+    {
+      "ctri_number": "CTRI/2026/08/116709",
+      "title": "Comparison Of Modified And Classical Takradhara In Management Of Psoriasis Skin Disorder",
+      "study_type": "interventional",
+      "phase": "Phase 3/ Phase 4",
+      "intervention": "Vishaghna Mahakashaya; takradhArA, तक्रधारा",
+      "target_sample_size": 24,
+      "sponsor": "Dr Hima Hasmukh Bhatt",
+      "health_condition": "(1) ICD-10 Condition: L409||Psoriasis, unspecified. Ayurveda Condition: EKAKUSHTHAH,",
+      "sites": [
+        {
+          "name": "S.G.Patel Ayurveda Hospital and Maternity Home",
+          "state": "Gujarat"
+        }
+      ]
+    },
+    {
+      "ctri_number": "CTRI/2026/09/116827",
+      "title": "Comparison of Yajna Therapy and an Ayurvedic Herbal Preparation in Thyroid Gland Related Disorder",
+      "study_type": "interventional",
+      "phase": "Phase 3/ Phase 4",
+      "intervention": "Hamsapadadi Kashaya; Yajna Chikitsa And Mantra Chikitsa",
+      "target_sample_size": 30,
+      "sponsor": "Dr Gnaneshwaree Damaniya",
+      "health_condition": "(1) ICD-10 Condition: E039||Hypothyroidism, unspecified. Ayurveda Condition: GALAGANDAH,",
+      "sites": [
+        {
+          "name": "S G Patel Ayurveda Hospital And Maternity Home",
+          "state": "Gujarat"
+        }
+      ]
+    }
+  ]
+}
