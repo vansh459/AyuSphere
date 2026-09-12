@@ -15,6 +15,7 @@ export type NavItem = {
     | "calendar"
     | "clipboard"
     | "alert-triangle"
+    | "message"
     | "scan"
     | "bell"
     | "bot"
@@ -27,6 +28,7 @@ export type NavItem = {
 
 export const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: "home", capability: "dashboard.view" },
+  { href: "/messages", label: "Messages", icon: "message", capability: "chat.use" },
   { href: "/trials", label: "Clinical Trials", icon: "flask", capability: "trial.manage" },
   { href: "/ethics", label: "Ethics Review", icon: "clipboard", capability: "trial.ethicsReview" },
   { href: "/participants", label: "Participants", icon: "users", capability: "participant.manage" },

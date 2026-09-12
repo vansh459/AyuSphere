@@ -29,6 +29,7 @@ export const CAPABILITIES = [
   "monitoring.log",
   "alert.acknowledge",
   "copilot.use",
+  "chat.use", // internal user-to-user messaging — communication, not a clinical-record mutation
   "export.run",
   "document.upload",
   "users.manage",
@@ -48,6 +49,7 @@ const MATRIX: Record<Role, readonly Capability[]> = {
     "ae.capture",
     "alert.acknowledge",
     "copilot.use",
+    "chat.use",
     "export.run",
     "document.upload",
   ],
@@ -59,22 +61,25 @@ const MATRIX: Record<Role, readonly Capability[]> = {
     "ae.capture",
     "alert.acknowledge",
     "copilot.use",
+    "chat.use",
     "document.upload",
   ],
-  monitor: ["dashboard.view", "monitoring.log", "alert.acknowledge"],
-  ethics: ["dashboard.view", "trial.ethicsReview"],
+  monitor: ["dashboard.view", "monitoring.log", "alert.acknowledge", "chat.use"],
+  ethics: ["dashboard.view", "trial.ethicsReview", "chat.use"],
   pv: [
     "dashboard.view",
     "ae.capture",
     "ae.review",
     "alert.acknowledge",
     "copilot.use",
+    "chat.use",
     "export.run",
   ],
   // admin: full access to every feature (user request, 2026-09-12)
   admin: [...CAPABILITIES],
-  // read-only regulator: NOTHING that mutates
-  regulator: ["dashboard.view", "audit.view"],
+  // read-only regulator: NOTHING that mutates clinical records —
+  // chat.use is communication, not a record mutation (not in MUTATING_CAPABILITIES)
+  regulator: ["dashboard.view", "audit.view", "chat.use"],
 };
 
 /** capabilities that mutate state — the regulator must never hold any */

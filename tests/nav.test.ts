@@ -3,9 +3,10 @@ import { NAV_ITEMS, navForRole } from "@/lib/nav";
 import { MUTATING_CAPABILITIES, ROLES } from "@/lib/rbac";
 
 describe("T1.7 — role-gated navigation", () => {
-  it("regulator sees ONLY read-only routes (dashboard + audit)", () => {
+  it("regulator sees only read-only routes plus messaging (dashboard + audit + messages)", () => {
     const items = navForRole("regulator").map((i) => i.href);
-    expect(items.sort()).toEqual(["/audit", "/dashboard"]);
+    // messaging is communication, not a clinical-record mutation (chat.use)
+    expect(items.sort()).toEqual(["/audit", "/dashboard", "/messages"]);
   });
 
   it("regulator nav contains no mutating capability", () => {

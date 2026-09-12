@@ -15,6 +15,13 @@
       "when": 1789129171197,
       "tag": "0001_lowly_piledriver",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789208133808,
+      "tag": "0002_careful_captain_america",
+      "breakpoints": true
     }
   ]
 }

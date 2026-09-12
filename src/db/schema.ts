@@ -409,6 +409,24 @@ export const appSettings = pgTable("app_settings", {
     .defaultNow(),
 });
 
+/**
+ * Internal user-to-user messaging. Content is NEVER copied into the audit
+ * trail — audit rows for message.send carry only the recipient id (privacy).
+ */
+export const messages = pgTable("messages", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  senderId: uuid("sender_id").notNull(),
+  recipientId: uuid("recipient_id").notNull(),
+  body: text("body").notNull().default(""),
+  attachmentUrl: text("attachment_url"),
+  attachmentName: text("attachment_name"),
+  attachmentType: text("attachment_type"),
+  readAt: timestamp("read_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 /** Insert-only (D-010). The app role gets no UPDATE/DELETE grant. */
 export const auditEvents = pgTable("audit_events", {
   id: uuid("id").primaryKey().defaultRandom(),
