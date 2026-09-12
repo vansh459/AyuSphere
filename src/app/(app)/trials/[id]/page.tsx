@@ -19,6 +19,7 @@ import { Card, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { DocPreview } from "@/components/app/doc-preview";
 import {
   BackLink,
   ErrorBanner,
@@ -250,6 +251,7 @@ export default async function TrialDetailPage(props: {
                     v{d.version} · {d.kind.replaceAll("_", " ")}
                   </span>
                 </p>
+                <DocPreview url={d.blobUrl} name={d.title} />
               </div>
             ))
           )}

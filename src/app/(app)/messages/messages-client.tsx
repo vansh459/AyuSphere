@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Paperclip, Send, X } from "lucide-react";
 import { fadeRise } from "@/lib/motion";
 import { cn } from "@/lib/utils";
+import { DocPreview } from "@/components/app/doc-preview";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/app/shared";
 
@@ -66,27 +67,38 @@ async function parseResponse<T>(res: Response): Promise<T & { error?: string }> 
 
 function Attachment({ m }: { m: Message }) {
   if (!m.attachmentUrl) return null;
+  const name = m.attachmentName ?? "attachment";
   if (m.attachmentType?.startsWith("image/")) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={m.attachmentUrl}
-        alt={m.attachmentName ?? "shared image"}
-        className="mt-2 max-h-64 w-full rounded-xl object-contain"
+      <DocPreview
+        url={m.attachmentUrl}
+        name={name}
+        contentType={m.attachmentType}
+        triggerClassName="mt-2 block w-full"
+        trigger={
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={m.attachmentUrl}
+            alt={name}
+            className="max-h-64 w-full rounded-xl object-contain"
+          />
+        }
       />
     );
   }
   return (
-    <a
-      href={m.attachmentUrl}
-      download={m.attachmentName ?? true}
-      target="_blank"
-      rel="noreferrer"
-      className="mt-2 flex items-center gap-2 rounded-xl border border-line/40 bg-black/5 px-3 py-2 font-medium underline-offset-2 hover:underline"
-    >
-      <Paperclip className="h-4 w-4 shrink-0" />
-      <span className="min-w-0 truncate">{m.attachmentName ?? "attachment"}</span>
-    </a>
+    <DocPreview
+      url={m.attachmentUrl}
+      name={name}
+      contentType={m.attachmentType}
+      triggerClassName="mt-2 block w-full"
+      trigger={
+        <span className="flex items-center gap-2 rounded-xl border border-line/40 bg-black/5 px-3 py-2 font-medium underline-offset-2 hover:underline">
+          <Paperclip className="h-4 w-4 shrink-0" />
+          <span className="min-w-0 truncate">{name}</span>
+        </span>
+      }
+    />
   );
 }
 

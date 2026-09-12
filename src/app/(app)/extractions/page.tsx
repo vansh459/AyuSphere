@@ -4,6 +4,7 @@ import { requireActor } from "@/lib/actor";
 import { getDb } from "@/db";
 import { extractions, participants, visits } from "@/db/schema";
 import { Card } from "@/components/ui/card";
+import { DocPreview } from "@/components/app/doc-preview";
 import {
   DbErrorState,
   EmptyState,
@@ -62,12 +63,19 @@ export default async function ExtractionsPage() {
                 : 0;
             return (
               <Card key={e.id} className="flex flex-col gap-3 p-4">
-                {/* original note image = source evidence (data-URL or blob) */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={e.blobUrl}
-                  alt={`Scanned note for ${subjectCode}`}
-                  className="h-40 w-full rounded-xl border border-line bg-bg object-contain"
+                {/* original note image = source evidence; click for popup */}
+                <DocPreview
+                  url={e.blobUrl}
+                  name={`Scanned note — ${subjectCode}`}
+                  trigger={
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={e.blobUrl}
+                      alt={`Scanned note for ${subjectCode}`}
+                      className="h-40 w-full rounded-xl border border-line bg-bg object-contain transition-transform duration-200 hover:-translate-y-[2px]"
+                    />
+                  }
+                  triggerClassName="w-full"
                 />
                 <div className="flex flex-wrap items-center gap-2">
                   <StatusBadge status={e.status} />

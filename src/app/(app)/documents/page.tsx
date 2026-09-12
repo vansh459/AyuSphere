@@ -9,6 +9,7 @@ import { Card, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { DocPreview } from "@/components/app/doc-preview";
 import {
   DbErrorState,
   ErrorBanner,
@@ -161,9 +162,12 @@ export default async function DocumentsPage(props: {
                     <Badge tone="info">{d.kind.replaceAll("_", " ")}</Badge>
                     <span className="opacity-50">{protocolCode}</span>
                   </div>
-                  <span className="opacity-50">
-                    {d.createdAt.toLocaleDateString()}
-                  </span>
+                  <div className="flex items-center gap-4">
+                    <DocPreview url={d.blobUrl} name={d.title} />
+                    <span className="opacity-50">
+                      {d.createdAt.toLocaleDateString()}
+                    </span>
+                  </div>
                 </div>
               ))
             )}
