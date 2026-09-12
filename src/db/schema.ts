@@ -109,6 +109,30 @@ export const aeStatusEnum = pgEnum("ae_status", [
   "closed",
 ]);
 
+export const amendmentStatusEnum = pgEnum("amendment_status", [
+  "submitted",
+  "approved",
+  "returned",
+]);
+
+export const queryStatusEnum = pgEnum("query_status", [
+  "open",
+  "answered",
+  "closed",
+]);
+
+export const adrSourceEnum = pgEnum("adr_source", [
+  "hospital",
+  "community",
+  "literature",
+]);
+
+export const adrStatusEnum = pgEnum("adr_status", [
+  "received",
+  "assessed",
+  "forwarded",
+]);
+
 export const documentKindEnum = pgEnum("document_kind", [
   "protocol",
   "ethics_approval",
@@ -166,6 +190,10 @@ export const trials = pgTable("trials", {
   status: trialStatusEnum("status").notNull().default("draft"),
   /** protocol visit plan: [{ visitNumber, name, dayOffset, windowDays }] */
   visitPlan: jsonb("visit_plan").notNull().default([]),
+  /** randomization arms (T10.2, D-027): [{ name, ratio }] — empty = default 1:1 */
+  arms: jsonb("arms").notNull().default([]),
+  /** bumped by each APPLIED protocol amendment (T10.3) */
+  protocolVersion: integer("protocol_version").notNull().default(1),
   plannedStart: timestamp("planned_start", { withTimezone: true }),
   plannedEnd: timestamp("planned_end", { withTimezone: true }),
   createdBy: uuid("created_by").notNull(),
@@ -423,6 +451,137 @@ export const messages = pgTable("messages", {
   attachmentType: text("attachment_type"),
   readAt: timestamp("read_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+/**
+ * Protocol amendments (T10.3) — IEC oversight beyond the initial review:
+ * PI/coordinator submit, ethics approve/return; an APPROVED, not-yet-applied
+ * amendment is the gate for protocol changes (visit plan / arms) on trials
+ * past draft, and applying it bumps trials.protocol_version.
+ */
+export const amendments = pgTable("amendments", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  trialId: uuid("trial_id")
+    .notNull()
+    .references(() => trials.id),
+  /** sequential per trial */
+  versionNumber: integer("version_number").notNull(),
+  summary: text("summary").notNull(),
+  documentId: uuid("document_id"),
+  status: amendmentStatusEnum("status").notNull().default("submitted"),
+  submittedBy: uuid("submitted_by").notNull(),
+  comment: text("comment"),
+  decidedBy: uuid("decided_by"),
+  decidedAt: timestamp("decided_at", { withTimezone: true }),
+  appliedAt: timestamp("applied_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+/**
+ * Data-query management (T10.1) — the human query loop the PS's
+ * "data-query status" names: a monitor raises a query on a CRF entry,
+ * data-entry roles answer, the monitor closes. An OPEN query blocks the
+ * entry's approval.
+ */
+export const dataQueries = pgTable("data_queries", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  crfEntryId: uuid("crf_entry_id")
+    .notNull()
+    .references(() => crfEntries.id),
+  question: text("question").notNull(),
+  status: queryStatusEnum("status").notNull().default("open"),
+  raisedBy: uuid("raised_by").notNull(),
+  answeredAt: timestamp("answered_at", { withTimezone: true }),
+  closedBy: uuid("closed_by"),
+  closedAt: timestamp("closed_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+/** the query's response thread */
+export const dataQueryMessages = pgTable("data_query_messages", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  queryId: uuid("query_id")
+    .notNull()
+    .references(() => dataQueries.id),
+  authorId: uuid("author_id").notNull(),
+  authorRole: text("author_role").notNull(),
+  body: text("body").notNull(),
+  at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * Spontaneous suspected-ADR reports for ASU&H drugs (T8.3, D-025) —
+ * AIIA's NPvCC surveillance role. Deliberately NOT linked to trial
+ * participants (de-identified spontaneous reports from outside trials);
+ * reporterRole is a role word, never an identity.
+ */
+export const suspectedAdrs = pgTable("suspected_adrs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  source: adrSourceEnum("source").notNull(),
+  /** verbatim reaction wording from the report */
+  term: text("term").notNull(),
+  meddraCode: text("meddra_code"),
+  /** verbatim suspected ASU formulation */
+  suspectedDrug: text("suspected_drug").notNull(),
+  whodrugCode: text("whodrug_code"),
+  eventDate: timestamp("event_date", { withTimezone: true }).notNull(),
+  seriousness: aeSeriousnessEnum("seriousness").notNull(),
+  outcome: text("outcome"),
+  narrative: text("narrative"),
+  reporterRole: text("reporter_role"),
+  status: adrStatusEnum("status").notNull().default("received"),
+  assessmentNote: text("assessment_note"),
+  createdBy: uuid("created_by").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+/**
+ * Monitoring visits (T7.3): a monitor's scheduled/completed site visits.
+ * Completing one advances trial_sites.monitoring_visit_due by the
+ * configured cadence (D-023); the sweep raises monitoring_overdue when the
+ * due date passes without a visit.
+ */
+export const monitoringVisits = pgTable("monitoring_visits", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  trialSiteId: uuid("trial_site_id")
+    .notNull()
+    .references(() => trialSites.id),
+  monitorId: uuid("monitor_id").notNull(),
+  scheduledDate: timestamp("scheduled_date", { withTimezone: true }).notNull(),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  summary: text("summary"),
+  /** free-form finding lines recorded at completion */
+  findings: jsonb("findings").notNull().default([]),
+  reportDocumentId: uuid("report_document_id"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+/**
+ * Electronic signatures (D-022): one row per signed record-freezing action
+ * (CRF approve/correct, extraction approve, AE report). The signer re-enters
+ * their password; payload_hash is the SHA-256 of the canonical signed
+ * content. Insert-only like audit_events — a signature is never edited.
+ */
+export const signatures = pgTable("signatures", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  actorId: uuid("actor_id").notNull(),
+  actorRole: text("actor_role").notNull(),
+  entityType: text("entity_type").notNull(),
+  entityId: uuid("entity_id").notNull(),
+  action: text("action").notNull(),
+  meaning: text("meaning").notNull(),
+  payloadHash: text("payload_hash").notNull(),
+  signedAt: timestamp("signed_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
 });

@@ -25,6 +25,15 @@ export default async function NewTrialPage(props: {
         windowDays: Number(formData.get(`visit_window_${i}`) ?? NaN),
       }))
       .filter((v) => v.name && Number.isFinite(v.dayOffset));
+    // randomization arms (T10.2): "name:ratio" pairs, comma-separated
+    const arms = String(formData.get("arms") ?? "")
+      .split(",")
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .map((part) => {
+        const [name, ratio] = part.split(":").map((s) => s.trim());
+        return { name, ratio: Number(ratio || 1) };
+      });
     let trialId: string;
     try {
       const trial = await createTrial(getDb(), actor, {
@@ -38,6 +47,7 @@ export default async function NewTrialPage(props: {
         dosageForm: String(formData.get("dosageForm") ?? "") || undefined,
         targetEnrollment: Number(formData.get("targetEnrollment") ?? 0),
         visitPlan,
+        ...(arms.length > 0 ? { arms } : {}),
       });
       trialId = trial.id;
     } catch (e) {
@@ -96,6 +106,20 @@ export default async function NewTrialPage(props: {
               <Label htmlFor="dosageForm">Dosage form</Label>
               <Input id="dosageForm" name="dosageForm" placeholder="capsule" />
             </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="arms">Randomization arms (name:ratio, comma-separated)</Label>
+            <Input
+              id="arms"
+              name="arms"
+              defaultValue="Intervention:1, Control:1"
+              placeholder="Intervention:1, Control:1"
+            />
+            <p className="opacity-50">
+              Permuted-block randomization assigns arms automatically at
+              enrolment (D-027) — block size is 2× the ratio sum.
+            </p>
           </div>
 
           <p className="microlabel mt-2">Protocol visit plan (at least one row)</p>

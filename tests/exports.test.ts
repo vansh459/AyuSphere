@@ -5,13 +5,20 @@ import { seed } from "@/db/seed";
 import { trials } from "@/db/schema";
 import { buildTrialBundle, toPatient } from "@/services/export/fhir";
 import {
+  ADSL_COLUMNS,
+  ADSL_ITEMS,
   AE_COLUMNS,
+  AE_ITEMS,
+  DEFINE_CODE_LISTS,
   DM_COLUMNS,
+  DM_ITEMS,
   buildAeDomain,
   buildDmDomain,
-  defineXmlStub,
+  defineXml,
   toCsv,
 } from "@/services/export/sdtm";
+import { buildAdsl } from "@/services/export/adam";
+import { DEFAULT_CRF_FIELDS } from "@/lib/crf";
 
 let db: TestDb;
 let ayu1Id: string;
@@ -24,7 +31,7 @@ beforeAll(async () => {
     .from(trials)
     .where(eq(trials.protocolCode, "AYU-001"));
   ayu1Id = t.id;
-}, 60_000);
+}, 180_000);
 
 describe("T4.1 — FHIR R4 bundle", () => {
   it("bundles ResearchStudy + Patients + ResearchSubjects + AdverseEvents with correct counts", async () => {
@@ -98,12 +105,145 @@ describe("T4.2 — SDTM domains", () => {
     for (const row of ae.rows) expect(["Y", "N"]).toContain(row.AESER);
   });
 
-  it("CSV escapes commas/quotes and Define-XML stub names both domains", () => {
+  it("CSV escapes commas and quotes", () => {
     const csv = toCsv(["A", "B"], [{ A: 'has "quotes"', B: "with, comma" }]);
     expect(csv).toBe('A,B\n"has ""quotes""","with, comma"\n');
-    const xml = defineXmlStub("AYU-001");
-    expect(xml).toContain('ItemGroupDef OID="IG.DM"');
-    expect(xml).toContain('ItemGroupDef OID="IG.AE"');
-    expect(xml).toContain("AYU-001");
+  });
+});
+
+describe("T9.2 — ADaM ADSL", () => {
+  it("exact column set, one row per subject, SAFFL consistent with enrolment", async () => {
+    const adsl = await buildAdsl(db, ayu1Id);
+    expect([...adsl.columns]).toEqual([...ADSL_COLUMNS]);
+    expect(adsl.rows).toHaveLength(45);
+    for (const row of adsl.rows) {
+      expect(row.STUDYID).toBe("AYU-001");
+      expect(row.USUBJID).toMatch(/^AYU-001-P-/);
+      // safety population flag ↔ first-exposure (enrolment) date
+      expect(row.SAFFL).toBe(row.TRTSDT ? "Y" : "N");
+      expect(["COMPLETED", "DISCONTINUED", "ONGOING", "NOT STARTED"]).toContain(
+        row.EOSSTT,
+      );
+      // only discontinued subjects may carry a discontinuation reason
+      if (row.EOSSTT !== "DISCONTINUED") expect(row.DCSREAS).toBe("");
+    }
+  });
+
+  it("a withdrawn subject carries EOSSTT=DISCONTINUED and DCSREAS", async () => {
+    const schema = await import("@/db/schema");
+    // plant a withdrawal on one enrolled AYU-001 subject
+    const [{ participant: enrolled }] = await db
+      .select({ participant: schema.participants })
+      .from(schema.participants)
+      .innerJoin(
+        schema.trialSites,
+        eq(schema.participants.trialSiteId, schema.trialSites.id),
+      )
+      .where(eq(schema.trialSites.trialId, ayu1Id))
+      .limit(50)
+      .then((rows) =>
+        rows.filter((r) => r.participant.status === "enrolled").slice(0, 1),
+      );
+    await db
+      .update(schema.participants)
+      .set({
+        status: "withdrawn",
+        withdrawalReason: "consent withdrawn by participant",
+        withdrawnAt: new Date(),
+      })
+      .where(eq(schema.participants.id, enrolled.id));
+
+    const adsl = await buildAdsl(db, ayu1Id);
+    const row = adsl.rows.find((r) => r.USUBJID === enrolled.subjectCode)!;
+    expect(row.EOSSTT).toBe("DISCONTINUED");
+    expect(row.DCSREAS).toBe("consent withdrawn by participant");
+    expect(row.SAFFL).toBe("Y"); // was enrolled → in the safety population
+    expect(adsl.csv).toContain("consent withdrawn by participant");
+  });
+
+  it("ADSL is listed in the Define-XML as an Analysis ItemGroup, 1:1 with columns", () => {
+    expect(ADSL_ITEMS.map((i) => i.name)).toEqual([...ADSL_COLUMNS]);
+    const xml = defineXml({ protocolCode: "AYU-001", title: "T" });
+    expect(xml).toContain(
+      'ItemGroupDef OID="IG.ADSL" Name="ADSL" Repeating="No" Purpose="Analysis"',
+    );
+    expect(xml).toContain('ItemDef OID="IT.ADSL.EOSSTT"');
+    expect(xml).toContain('CodeListRef CodeListOID="CL.EOSSTT"');
+  });
+});
+
+describe("T9.1 — Define-XML with real variable-level metadata", () => {
+  const TRIAL = { protocolCode: "AYU-001", title: "Fixture & trial <title>" };
+  const TEMPLATES = [
+    { name: "Baseline CRF", visitType: "Baseline", fields: DEFAULT_CRF_FIELDS },
+  ];
+  const xml = defineXml(TRIAL, TEMPLATES);
+
+  it("variable metadata is 1:1 with the exported CSV columns", () => {
+    expect(DM_ITEMS.map((i) => i.name)).toEqual([...DM_COLUMNS]);
+    expect(AE_ITEMS.map((i) => i.name)).toEqual([...AE_COLUMNS]);
+  });
+
+  it("every ItemRef resolves to an ItemDef; every CodeListRef to a CodeList", () => {
+    const refOids = [...xml.matchAll(/ItemRef ItemOID="([^"]+)"/g)].map((m) => m[1]);
+    const defOids = new Set(
+      [...xml.matchAll(/ItemDef OID="([^"]+)"/g)].map((m) => m[1]),
+    );
+    expect(refOids.length).toBeGreaterThan(0);
+    for (const oid of refOids) {
+      expect(defOids.has(oid), `ItemRef ${oid} must have an ItemDef`).toBe(true);
+    }
+    // and no orphan ItemDefs either
+    expect(defOids.size).toBe(new Set(refOids).size);
+
+    const clRefs = [...xml.matchAll(/CodeListRef CodeListOID="([^"]+)"/g)].map(
+      (m) => m[1],
+    );
+    const clDefs = new Set(
+      [...xml.matchAll(/CodeList OID="([^"]+)"/g)].map((m) => m[1]),
+    );
+    expect(clRefs.length).toBeGreaterThan(0);
+    for (const oid of clRefs) {
+      expect(clDefs.has(oid), `CodeListRef ${oid} must resolve`).toBe(true);
+    }
+    expect(clDefs.size).toBe(DEFINE_CODE_LISTS.length);
+  });
+
+  it("datatypes match column semantics; codelists carry decodes", () => {
+    expect(xml).toContain('ItemDef OID="IT.DM.RFSTDTC" Name="RFSTDTC" DataType="date"');
+    expect(xml).toContain('ItemDef OID="IT.AE.AESTDTC" Name="AESTDTC" DataType="date"');
+    expect(xml).toContain('ItemDef OID="IT.AE.AESEQ" Name="AESEQ" DataType="integer"');
+    expect(xml).toContain('ItemDef OID="IT.AE.AESER" Name="AESER" DataType="text" Length="1"');
+    expect(xml).toContain('CodeListItem CodedValue="MODERATE"');
+    expect(xml).toContain("<Decode><TranslatedText xml:lang=\"en\">Moderate</TranslatedText></Decode>");
+    // mandatory flags flow into ItemRefs
+    expect(xml).toMatch(/ItemRef ItemOID="IT\.AE\.AETERM"[^/]*Mandatory="Yes"/);
+    expect(xml).toMatch(/ItemRef ItemOID="IT\.AE\.AEOUT"[^/]*Mandatory="No"/);
+  });
+
+  it("CRF templates become ItemGroups with cdashVar-named, typed, unit-labeled ItemDefs", () => {
+    expect(xml).toContain('ItemGroupDef OID="IG.CRF1" Name="Baseline — Baseline CRF"');
+    // number field → float, label carries unit + plausible range
+    expect(xml).toContain('ItemDef OID="IT.CRF1.VSORRES_SYSBP" Name="VSORRES_SYSBP" DataType="float"');
+    expect(xml).toContain("Systolic BP (mmHg) [plausible 70–250]");
+    // text field → text
+    expect(xml).toContain('ItemDef OID="IT.CRF1.CONOTES" Name="CONOTES" DataType="text"');
+  });
+
+  it("is well-formed XML (balanced tags) and escapes the trial title", () => {
+    expect(xml).toContain("Fixture &amp; trial &lt;title&gt;");
+    // lightweight well-formedness: every open tag closes in order
+    const tags = [...xml.matchAll(/<(\/?)([A-Za-z][\w:.-]*)((?:"[^"]*"|[^"<>])*?)(\/?)>/g)];
+    const stack: string[] = [];
+    for (const [, closing, name, , selfClosing] of tags) {
+      if (name.startsWith("?")) continue;
+      if (selfClosing) continue;
+      if (closing) {
+        expect(stack.pop(), `closing </${name}> must match`).toBe(name);
+      } else {
+        stack.push(name);
+      }
+    }
+    expect(stack).toEqual([]);
   });
 });

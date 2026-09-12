@@ -10,7 +10,8 @@ const FORMATS = [
   { key: "fhir", label: "FHIR R4 Bundle", note: "ResearchStudy · ResearchSubject · Patient (de-identified) · AdverseEvent" },
   { key: "dm", label: "SDTM DM (CSV)", note: "Demographics domain" },
   { key: "ae", label: "SDTM AE (CSV)", note: "Adverse events domain" },
-  { key: "define", label: "Define-XML stub", note: "Metadata for the exported domains" },
+  { key: "adsl", label: "ADaM ADSL (CSV)", note: "Subject-level analysis dataset" },
+  { key: "define", label: "Define-XML", note: "Variable-level metadata: ItemDefs, codelists, CRF capture metadata" },
 ] as const;
 
 export default async function ExportsPage() {
@@ -31,8 +32,10 @@ export default async function ExportsPage() {
       <div>
         <h1 className="text-heading font-bold">Submission-Ready Exports</h1>
         <p className="mt-1 opacity-70">
-          CDISC/FHIR focused subset — every export is recorded in the audit
-          trail. Full SDTM/ADaM coverage is a roadmap item, stated plainly.
+          CDISC/FHIR focused subset — SDTM DM/AE, ADaM ADSL, and Define-XML
+          with variable-level metadata; every export is recorded in the audit
+          trail. Full domain coverage beyond this subset is a roadmap item,
+          stated plainly.
         </p>
       </div>
       {dbError ? (
@@ -63,6 +66,13 @@ export default async function ExportsPage() {
                 </a>
               ))}
             </div>
+            <p className="opacity-50">
+              Live FHIR R4 endpoints (authenticated, audited — the ABDM-ready
+              building block): <code>GET /api/fhir/Bundle/{t.id.slice(0, 8)}…</code>{" "}
+              · <code>GET /api/fhir/ResearchStudy/{t.id.slice(0, 8)}…</code> ·
+              EDC/HIS inbound: <code>POST /api/fhir/import</code> (Observations
+              → draft CRF entry, never auto-approved).
+            </p>
           </Card>
         ))
       )}

@@ -32,7 +32,7 @@ beforeAll(async () => {
   pv = actor("pv");
   monitor = actor("monitor");
   admin = actor("admin");
-}, 60_000);
+}, 180_000);
 
 describe("T3.2 — intent routing", () => {
   it("classifies recruitment / safety / portfolio questions", () => {

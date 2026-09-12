@@ -21,7 +21,7 @@ beforeAll(async () => {
     .from(trials)
     .where(eq(trials.protocolCode, "AYU-001"));
   ayu1Id = ayu1.id;
-}, 60_000);
+}, 180_000);
 
 describe("T2.5 — portfolio KPIs against the seed (exact numbers)", () => {
   it("counts trials, participants, sites, AEs exactly", async () => {

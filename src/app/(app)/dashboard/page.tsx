@@ -18,17 +18,25 @@ import {
 } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { can } from "@/lib/rbac";
+import { dashboardVariant, type DashboardCard } from "@/lib/dashboard-variants";
 import { getDb } from "@/db";
-import { participants, visits } from "@/db/schema";
+import { participants, trials, visits } from "@/db/schema";
 import {
   aiInsights,
   participantDistribution,
+  pendingApprovals,
   recentActivities,
   sitePerformanceAggregate,
   statCards,
   trialProgressSeries,
   upcomingVisitList,
 } from "@/services/dashboard";
+import { listQueries, queryStats } from "@/services/data-queries";
+import { pendingAmendments } from "@/services/amendments";
+import { openAesByDeadline } from "@/services/kpi";
+import { safetySignals } from "@/services/safety-signals";
+import { listActiveTrialSites } from "@/services/monitoring";
+import { EscalationClock } from "@/components/app/escalation-clock";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DbErrorState } from "@/components/app/shared";
@@ -65,6 +73,9 @@ export default async function DashboardPage() {
   const session = await auth();
   const user = session!.user;
   const now = new Date();
+  // tailored dashboards (T10.5): the role decides which cards compose
+  const cards = dashboardVariant(user.role);
+  const show = (c: DashboardCard) => cards.includes(c);
 
   let data: {
     stats: Awaited<ReturnType<typeof statCards>>;
@@ -75,6 +86,18 @@ export default async function DashboardPage() {
     upcoming: Awaited<ReturnType<typeof upcomingVisitList>>;
     insights: Awaited<ReturnType<typeof aiInsights>>;
     visitOptions: VisitOption[];
+    approvals: Awaited<ReturnType<typeof pendingApprovals>> | null;
+    queries: {
+      stats: Awaited<ReturnType<typeof queryStats>>;
+      open: Awaited<ReturnType<typeof listQueries>>;
+    } | null;
+    ethicsQueues: {
+      reviews: { id: string; protocolCode: string; title: string }[];
+      amendments: Awaited<ReturnType<typeof pendingAmendments>>;
+    } | null;
+    safetyClocks: Awaited<ReturnType<typeof openAesByDeadline>> | null;
+    signals: Awaited<ReturnType<typeof safetySignals>> | null;
+    monitoringSites: Awaited<ReturnType<typeof listActiveTrialSites>> | null;
   } | null = null;
 
   try {
@@ -107,7 +130,57 @@ export default async function DashboardPage() {
         label: `${v.subjectCode} · ${v.name}`,
       }));
     }
-    data = { stats, progress, distribution, sitePerf, activities, upcoming, insights, visitOptions };
+    // role-specific cards load only when the variant shows them
+    const approvals = show("pending-approvals") ? await pendingApprovals(db) : null;
+    const queries = show("open-queries")
+      ? {
+          stats: await queryStats(db),
+          open: (await listQueries(db, 30)).filter(
+            (q) => q.query.status === "open",
+          ).slice(0, 5),
+        }
+      : null;
+    const ethicsQueues = show("ethics-queues")
+      ? {
+          reviews: (
+            await db
+              .select({
+                id: trials.id,
+                protocolCode: trials.protocolCode,
+                title: trials.title,
+              })
+              .from(trials)
+              .where(eq(trials.status, "iec_review"))
+          ).slice(0, 5),
+          amendments: await pendingAmendments(db),
+        }
+      : null;
+    const safetyClocks = show("safety-clocks")
+      ? (await openAesByDeadline(db)).slice(0, 4)
+      : null;
+    const signals = show("safety-signals")
+      ? (await safetySignals(db)).slice(0, 5)
+      : null;
+    const monitoringSites = show("monitoring-panel")
+      ? await listActiveTrialSites(db)
+      : null;
+
+    data = {
+      stats,
+      progress,
+      distribution,
+      sitePerf,
+      activities,
+      upcoming,
+      insights,
+      visitOptions,
+      approvals,
+      queries,
+      ethicsQueues,
+      safetyClocks,
+      signals,
+      monitoringSites,
+    };
   } catch {
     data = null;
   }
@@ -210,6 +283,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* stat cards */}
+        {show("portfolio-stats") ? (
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
           {statTiles.map((t) => {
             const Icon = t.icon;
@@ -240,13 +314,239 @@ export default async function DashboardPage() {
             );
           })}
         </div>
+        ) : null}
+
+        {/* role-specific work queues (T10.5) */}
+        {show("safety-clocks") && data.safetyClocks ? (
+          <Card className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-body font-bold">
+                Safety portfolio — by reporting deadline
+              </CardTitle>
+              <Link href="/adverse-events" className="font-medium text-primary">
+                Open AE/SAE →
+              </Link>
+            </div>
+            {data.safetyClocks.length === 0 ? (
+              <p className="opacity-70">No open adverse events.</p>
+            ) : (
+              <div className="flex flex-wrap gap-6">
+                {data.safetyClocks.map(({ ae, subjectCode }) => (
+                  <div key={ae.id} className="flex items-center gap-3">
+                    <EscalationClock
+                      deadline={ae.reportingDeadline}
+                      totalHours={ae.seriousness === "sae" ? 24 : 168}
+                    />
+                    <div className="min-w-0">
+                      <p className="font-medium">{ae.term}</p>
+                      <p className="opacity-50">
+                        {subjectCode} · {ae.seriousness.toUpperCase()}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        ) : null}
+
+        {show("ethics-queues") && data.ethicsQueues ? (
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+            <Card className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-body font-bold">
+                  Awaiting IEC review ({data.ethicsQueues.reviews.length})
+                </CardTitle>
+                <Link href="/ethics" className="font-medium text-primary">
+                  Review queue →
+                </Link>
+              </div>
+              {data.ethicsQueues.reviews.length === 0 ? (
+                <p className="opacity-70">No trials awaiting review.</p>
+              ) : (
+                data.ethicsQueues.reviews.map((t) => (
+                  <p key={t.id} className="opacity-70">
+                    <span className="font-medium">{t.protocolCode}</span> —{" "}
+                    {t.title}
+                  </p>
+                ))
+              )}
+            </Card>
+            <Card className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-body font-bold">
+                  Amendment queue ({data.ethicsQueues.amendments.length})
+                </CardTitle>
+                <Link href="/ethics" className="font-medium text-primary">
+                  Decide →
+                </Link>
+              </div>
+              {data.ethicsQueues.amendments.length === 0 ? (
+                <p className="opacity-70">No amendments awaiting review.</p>
+              ) : (
+                data.ethicsQueues.amendments.map(({ amendment, protocolCode }) => (
+                  <p key={amendment.id} className="opacity-70">
+                    <span className="font-medium">
+                      {protocolCode} v{amendment.versionNumber}
+                    </span>{" "}
+                    — {amendment.summary}
+                  </p>
+                ))
+              )}
+            </Card>
+          </div>
+        ) : null}
+
+        {(show("pending-approvals") && data.approvals) ||
+        (show("open-queries") && data.queries) ||
+        (show("safety-signals") && data.signals) ? (
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+            {show("pending-approvals") && data.approvals ? (
+              <Card className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-body font-bold">
+                    Pending your signature
+                  </CardTitle>
+                  <Badge
+                    tone={
+                      data.approvals.submittedEntries +
+                        data.approvals.extractionsInReview >
+                      0
+                        ? "warning"
+                        : "success"
+                    }
+                  >
+                    {data.approvals.submittedEntries} CRF ·{" "}
+                    {data.approvals.extractionsInReview} extractions
+                  </Badge>
+                </div>
+                {data.approvals.queue.length === 0 ? (
+                  <p className="opacity-70">Nothing awaiting approval.</p>
+                ) : (
+                  data.approvals.queue.map((q) => (
+                    <Link
+                      key={q.entryId}
+                      href={`/visits/${q.visitId}`}
+                      className="opacity-70 hover:opacity-100"
+                    >
+                      <span className="font-medium">{q.subjectCode}</span> ·{" "}
+                      {q.visitName} — sign &amp; approve →
+                    </Link>
+                  ))
+                )}
+              </Card>
+            ) : null}
+
+            {show("open-queries") && data.queries ? (
+              <Card className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-body font-bold">
+                    Data queries
+                  </CardTitle>
+                  <Badge tone={data.queries.stats.open > 0 ? "warning" : "success"}>
+                    {data.queries.stats.open} open
+                  </Badge>
+                </div>
+                {data.queries.open.length === 0 ? (
+                  <p className="opacity-70">No open queries.</p>
+                ) : (
+                  data.queries.open.map(({ query, subjectCode, visitName }) => (
+                    <p key={query.id} className="opacity-70">
+                      <span className="font-medium">{subjectCode}</span> ·{" "}
+                      {visitName} — {query.question}
+                    </p>
+                  ))
+                )}
+              </Card>
+            ) : null}
+
+            {show("safety-signals") && data.signals ? (
+              <Card className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-body font-bold">
+                    Safety signals
+                  </CardTitle>
+                  <Link
+                    href="/adverse-events/dsmb"
+                    className="font-medium text-primary"
+                  >
+                    DSMB summary →
+                  </Link>
+                </div>
+                {data.signals.length === 0 ? (
+                  <p className="opacity-70">No events recorded yet.</p>
+                ) : (
+                  data.signals.map((s) => (
+                    <div
+                      key={`${s.trialId}-${s.termKey}`}
+                      className="flex items-center gap-2"
+                    >
+                      {s.flagged ? <Badge tone="danger">signal</Badge> : null}
+                      <p className="min-w-0 truncate opacity-70">
+                        <span className="font-medium">{s.termLabel}</span> ·{" "}
+                        {s.protocolCode} · {s.count}/{s.trialTotal} ·{" "}
+                        {s.ratio.toFixed(2)}×
+                      </p>
+                    </div>
+                  ))
+                )}
+              </Card>
+            ) : null}
+          </div>
+        ) : null}
+
+        {show("monitoring-panel") && data.monitoringSites ? (
+          <Card className="flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-body font-bold">
+                Monitoring — site due dates
+              </CardTitle>
+              <Link href="/monitoring" className="font-medium text-primary">
+                Log a visit →
+              </Link>
+            </div>
+            {data.monitoringSites.length === 0 ? (
+              <p className="opacity-70">No activated trial sites.</p>
+            ) : (
+              data.monitoringSites.map((s) => {
+                const overdue =
+                  s.monitoringVisitDue &&
+                  s.monitoringVisitDue.getTime() < Date.now();
+                return (
+                  <div
+                    key={s.trialSiteId}
+                    className="flex flex-wrap items-center justify-between gap-3"
+                  >
+                    <p className="font-medium">
+                      {s.protocolCode} · {s.siteName}
+                    </p>
+                    {s.monitoringVisitDue ? (
+                      <Badge tone={overdue ? "danger" : "success"}>
+                        {overdue ? "overdue since " : "due "}
+                        {s.monitoringVisitDue.toLocaleDateString()}
+                      </Badge>
+                    ) : (
+                      <Badge tone="neutral">not scheduled</Badge>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </Card>
+        ) : null}
 
         {/* charts row */}
+        {show("trial-progress") ||
+        show("participant-distribution") ||
+        show("site-performance") ? (
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+          {show("trial-progress") ? (
           <Card className="flex flex-col gap-3 xl:col-span-1">
             <CardTitle className="text-body font-bold">Trial Progress</CardTitle>
             <TrialProgressChart data={data.progress} />
           </Card>
+          ) : null}
+          {show("participant-distribution") ? (
           <Card className="flex flex-col gap-3 xl:col-span-1">
             <CardTitle className="text-body font-bold">
               Participant Distribution
@@ -256,6 +556,8 @@ export default async function DashboardPage() {
               slices={data.distribution.slices}
             />
           </Card>
+          ) : null}
+          {show("site-performance") ? (
           <Card className="flex flex-col gap-3 xl:col-span-1">
             <div className="flex items-center justify-between">
               <CardTitle className="text-body font-bold">
@@ -280,10 +582,13 @@ export default async function DashboardPage() {
               ))}
             </div>
           </Card>
+          ) : null}
         </div>
+        ) : null}
 
         {/* feeds row */}
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+          {show("recent-activity") ? (
           <Card className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <CardTitle className="text-body font-bold">
@@ -311,7 +616,9 @@ export default async function DashboardPage() {
               );
             })}
           </Card>
+          ) : null}
 
+          {show("upcoming-visits") ? (
           <Card className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <CardTitle className="text-body font-bold">
@@ -340,7 +647,9 @@ export default async function DashboardPage() {
               </div>
             ))}
           </Card>
+          ) : null}
 
+          {show("insights") ? (
           <Card className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <CardTitle className="text-body font-bold">AI Insights</CardTitle>
@@ -369,7 +678,25 @@ export default async function DashboardPage() {
               );
             })}
           </Card>
+          ) : null}
         </div>
+
+        {show("audit-shortcut") ? (
+          <Link href="/audit">
+            <Card className="flex flex-wrap items-center justify-between gap-3 transition-transform duration-200 hover:-translate-y-[2px]">
+              <div>
+                <CardTitle className="text-body font-bold">
+                  Audit trail — full provenance
+                </CardTitle>
+                <p className="mt-1 opacity-70">
+                  Immutable, time-stamped record of every action (ALCOA+),
+                  filterable by actor, entity, and action.
+                </p>
+              </div>
+              <Badge tone="info">open browser →</Badge>
+            </Card>
+          </Link>
+        ) : null}
 
         {/* quote banner */}
         <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-primary-soft px-6 py-4">
@@ -395,7 +722,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* right rail — AI Assistant */}
-      {can(user.role, "crf.enter") || can(user.role, "copilot.use") ? (
+      {show("assistant") ? (
         <AssistantPanel
           visits={data.visitOptions}
           canUseCopilot={can(user.role, "copilot.use")}

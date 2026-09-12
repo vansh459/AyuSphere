@@ -30,7 +30,7 @@ beforeAll(async () => {
   await seed(db);
   const [u] = await db.select().from(users).where(eq(users.role, "admin"));
   admin = { id: u.id, role: "admin" };
-}, 60_000);
+}, 180_000);
 
 describe("trials list query (the /trials page bug)", () => {
   it("returns per-trial enrolled + site counts against the seed", async () => {

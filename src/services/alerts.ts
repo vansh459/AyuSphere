@@ -9,6 +9,7 @@ import type { Db } from "@/db";
 import {
   adverseEvents,
   alerts,
+  documents,
   milestones,
   participants,
   trialSites,
@@ -17,6 +18,7 @@ import {
 } from "@/db/schema";
 import { withAudit, type Actor } from "@/lib/audit";
 import { assertCan } from "@/lib/rbac";
+import { getAlertConfig } from "@/services/settings";
 import { refreshVisitStatuses } from "@/services/visits";
 
 export type RuleKey =
@@ -25,7 +27,9 @@ export type RuleKey =
   | "ae_deadline_approaching"
   | "ae_deadline_breached"
   | "milestone_due"
-  | "enrolment_lag";
+  | "enrolment_lag"
+  | "monitoring_overdue"
+  | "reconsent_due";
 
 type RaiseInput = {
   ruleKey: RuleKey;
@@ -93,14 +97,13 @@ export async function acknowledgeAlert(db: Db, actor: Actor, alertId: string) {
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
 
-/** recruitment below this fraction of target counts as lagging */
-export const ENROLMENT_LAG_THRESHOLD = 0.5;
-
 /**
  * The time-based sweep — runs from Vercel Cron and before dashboard reads.
- * Every rule here maps to a PS-named alert (workflow.md §9).
+ * Every rule here maps to a PS-named alert (workflow.md §9). Thresholds come
+ * from the admin-configurable alert config (D-023) with built-in defaults.
  */
 export async function sweepAlerts(db: Db, now = new Date()) {
+  const config = await getAlertConfig(db);
   await refreshVisitStatuses(db, now);
   let raised = 0;
   let resolved = 0;
@@ -166,13 +169,16 @@ export async function sweepAlerts(db: Db, now = new Date()) {
       resolved += Number(
         await resolveOpenAlert(db, "ae_deadline_approaching", ref),
       );
-    } else if (ae.reportingDeadline.getTime() - now.getTime() <= 24 * HOUR) {
+    } else if (
+      ae.reportingDeadline.getTime() - now.getTime() <=
+      config.aeApproachingHours * HOUR
+    ) {
       raised += Number(
         await raiseAlert(db, {
           ruleKey: "ae_deadline_approaching",
           entityRef: ref,
           severity: "warning",
-          message: `Reporting deadline within 24h for '${ae.term}' (${ae.seriousness.toUpperCase()})`,
+          message: `Reporting deadline within ${config.aeApproachingHours}h for '${ae.term}' (${ae.seriousness.toUpperCase()})`,
         }),
       );
     }
@@ -191,14 +197,17 @@ export async function sweepAlerts(db: Db, now = new Date()) {
     );
   }
 
-  // 4) milestones due within 7 days and not completed (CTRI / ethics dues)
+  // 4) milestones due within the configured lookahead (CTRI / ethics dues)
   const dueMilestones = await db
     .select()
     .from(milestones)
     .where(
       and(
         isNull(milestones.completedAt),
-        lte(milestones.dueDate, new Date(now.getTime() + 7 * DAY)),
+        lte(
+          milestones.dueDate,
+          new Date(now.getTime() + config.milestoneLookaheadDays * DAY),
+        ),
       ),
     );
   for (const m of dueMilestones) {
@@ -234,7 +243,10 @@ export async function sweepAlerts(db: Db, now = new Date()) {
     );
   for (const row of lagRows) {
     const ref = `trial_site:${row.id}`;
-    if (row.target > 0 && row.enrolled / row.target < ENROLMENT_LAG_THRESHOLD) {
+    if (
+      row.target > 0 &&
+      row.enrolled / row.target < config.enrolmentLagThreshold
+    ) {
       raised += Number(
         await raiseAlert(db, {
           ruleKey: "enrolment_lag",
@@ -247,6 +259,82 @@ export async function sweepAlerts(db: Db, now = new Date()) {
       );
     } else {
       resolved += Number(await resolveOpenAlert(db, "enrolment_lag", ref));
+    }
+  }
+
+  // 6) overdue monitoring visits per activated trial-site (T7.3) — the due
+  // date is set by scheduling and advanced by completing a monitoring visit
+  const monitoringRows = await db
+    .select({
+      id: trialSites.id,
+      trialId: trialSites.trialId,
+      siteId: trialSites.siteId,
+      due: trialSites.monitoringVisitDue,
+    })
+    .from(trialSites)
+    .where(eq(trialSites.activationStatus, "active"));
+  for (const row of monitoringRows) {
+    const ref = `trial_site:${row.id}`;
+    if (row.due && row.due.getTime() < now.getTime()) {
+      raised += Number(
+        await raiseAlert(db, {
+          ruleKey: "monitoring_overdue",
+          entityRef: ref,
+          severity: "warning",
+          message: `Monitoring visit overdue since ${row.due.toISOString().slice(0, 10)}`,
+          trialId: row.trialId,
+          siteId: row.siteId,
+        }),
+      );
+    } else {
+      resolved += Number(
+        await resolveOpenAlert(db, "monitoring_overdue", ref),
+      );
+    }
+  }
+
+  // 7) re-consent due (T10.4): participants whose SIGNED consent-form
+  // version is older than the trial's latest consent form. Legacy consents
+  // with no bound document are skipped (nothing to compare against).
+  const consentRows = await db
+    .select({
+      participantId: participants.id,
+      subjectCode: participants.subjectCode,
+      consentStatus: participants.consentStatus,
+      signedVersion: documents.version,
+      trialId: trialSites.trialId,
+      siteId: trialSites.siteId,
+    })
+    .from(participants)
+    .innerJoin(trialSites, eq(participants.trialSiteId, trialSites.id))
+    .innerJoin(documents, eq(participants.consentDocumentId, documents.id));
+  const latestFormVersion = new Map<string, number>();
+  const consentForms = await db
+    .select({ trialId: documents.trialId, version: documents.version })
+    .from(documents)
+    .where(eq(documents.kind, "consent_form"));
+  for (const f of consentForms) {
+    latestFormVersion.set(
+      f.trialId,
+      Math.max(latestFormVersion.get(f.trialId) ?? 0, f.version),
+    );
+  }
+  for (const row of consentRows) {
+    const ref = `participant:${row.participantId}`;
+    const latest = latestFormVersion.get(row.trialId) ?? 0;
+    if (row.consentStatus === "given" && row.signedVersion < latest) {
+      raised += Number(
+        await raiseAlert(db, {
+          ruleKey: "reconsent_due",
+          entityRef: ref,
+          severity: "warning",
+          message: `${row.subjectCode} consented on form v${row.signedVersion} — v${latest} now current, re-consent required`,
+          trialId: row.trialId,
+          siteId: row.siteId,
+        }),
+      );
+    } else {
+      resolved += Number(await resolveOpenAlert(db, "reconsent_due", ref));
     }
   }
 

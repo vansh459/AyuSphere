@@ -12,6 +12,7 @@ import {
   visits,
 } from "@/db/schema";
 import type { Actor } from "@/lib/audit";
+import { hashPassword } from "@/lib/auth-core";
 import type { CrfField } from "@/lib/crf";
 import type { VisionClient } from "@/lib/ai/types";
 import {
@@ -59,13 +60,18 @@ let pi: Actor, coordinator: Actor;
 let visit1: string; // has a previous approved entry with dose 500
 let visit2: string;
 
+// e-signature (D-022): extraction approval is signed with the reviewer's password
+const PW = "Sign@1234";
+const SIG = { password: PW };
+
 beforeAll(async () => {
   db = await createTestDb();
+  const hash = await hashPassword(PW);
   const userRows = await db
     .insert(users)
     .values([
-      { email: "pi@e.demo", passwordHash: "x", name: "PI", role: "pi" },
-      { email: "co@e.demo", passwordHash: "x", name: "CO", role: "coordinator" },
+      { email: "pi@e.demo", passwordHash: hash, name: "PI", role: "pi" },
+      { email: "co@e.demo", passwordHash: hash, name: "CO", role: "coordinator" },
     ])
     .returning();
   pi = { id: userRows[0].id, role: "pi" };
@@ -155,6 +161,7 @@ describe("T2.4 — quality gate", () => {
         extractionId: row.id,
         finalData: { sbp: 120, dose_mg: 500 },
         touchedFields: [],
+        signature: SIG,
       }),
     ).rejects.toThrow(/only 'review'/);
   });
@@ -234,6 +241,7 @@ describe("T2.4 — extraction → review with confidence + contradiction gating"
         extractionId: row.id,
         finalData: { sbp: 132, dose_mg: 250, notes: "tolerating well" },
         touchedFields: [], // doctor confirmed nothing
+        signature: SIG,
       }),
     ).rejects.toThrow(/dose_mg/);
   });
@@ -250,6 +258,7 @@ describe("T2.4 — extraction → review with confidence + contradiction gating"
         extractionId: row.id,
         finalData: { sbp: 132, dose_mg: 500, notes: "tolerating well" },
         touchedFields: ["dose_mg"],
+        signature: SIG,
       }),
     ).rejects.toThrow(RbacError);
 
@@ -257,6 +266,7 @@ describe("T2.4 — extraction → review with confidence + contradiction gating"
       extractionId: row.id,
       finalData: { sbp: 132, dose_mg: 500, notes: "corrected vs note" },
       touchedFields: ["dose_mg"],
+      signature: SIG,
     });
     expect(entry.source).toBe("extraction");
     expect(entry.extractionId).toBe(row.id);
@@ -294,6 +304,7 @@ describe("T2.4 — extraction → review with confidence + contradiction gating"
         extractionId: row.id,
         finalData: { sbp: 9000, dose_mg: 500 },
         touchedFields: [],
+        signature: SIG,
       }),
     ).rejects.toThrow(/final data invalid/);
     // reject it instead

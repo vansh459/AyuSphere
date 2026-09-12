@@ -9,8 +9,11 @@ import { getDb } from "@/db";
 import { crfEntries, crfTemplates, participants, visits } from "@/db/schema";
 import { parseTemplateFields, type CrfField } from "@/lib/crf";
 import { approveEntry, createDraftEntry, submitEntry } from "@/services/crf";
+import { answerQuery, queriesForEntries } from "@/services/data-queries";
+import { signaturesFor, SIGNATURE_MEANINGS } from "@/services/signatures";
 import { completeVisit } from "@/services/visits";
 import { Card, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import {
@@ -61,6 +64,16 @@ export default async function VisitDetailPage(props: {
     .from(crfEntries)
     .where(eq(crfEntries.visitId, id))
     .orderBy(desc(crfEntries.createdAt));
+  const entrySignatures = await signaturesFor(
+    db,
+    "crf_entry",
+    entries.map((e) => e.id),
+  );
+  const signedEntryIds = new Set(entrySignatures.map((s) => s.entityId));
+  const entryQueries = await queriesForEntries(
+    db,
+    entries.map((e) => e.id),
+  );
   const canApprove = can(session.user.role, "crf.approve");
   const isOpen = !["completed", "cancelled", "missed"].includes(row.visit.status);
 
@@ -90,12 +103,32 @@ export default async function VisitDetailPage(props: {
     "use server";
     const actor = await requireActor("crf.approve");
     try {
-      await approveEntry(getDb(), actor, String(formData.get("entryId")));
+      // e-signature (D-022): re-entered password signs the approval
+      await approveEntry(getDb(), actor, String(formData.get("entryId")), {
+        password: String(formData.get("password") ?? ""),
+      });
     } catch (e) {
       redirect(withError(`/visits/${id}`, e));
     }
     revalidatePath(`/visits/${id}`);
     revalidatePath("/visits");
+    redirect(`/visits/${id}`);
+  }
+
+  async function answer(formData: FormData) {
+    "use server";
+    const actor = await requireActor("crf.enter");
+    try {
+      await answerQuery(
+        getDb(),
+        actor,
+        String(formData.get("queryId")),
+        String(formData.get("body") ?? ""),
+      );
+    } catch (e) {
+      redirect(withError(`/visits/${id}`, e));
+    }
+    revalidatePath(`/visits/${id}`);
     redirect(`/visits/${id}`);
   }
 
@@ -190,9 +223,12 @@ export default async function VisitDetailPage(props: {
               key={e.id}
               className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-3 last:border-0 last:pb-0"
             >
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <StatusBadge status={e.status} />
+                  {signedEntryIds.has(e.id) ? (
+                    <Badge tone="success">Signed</Badge>
+                  ) : null}
                   <span className="opacity-50">
                     v{e.version} · {e.source} ·{" "}
                     {e.createdAt.toLocaleString()}
@@ -201,13 +237,76 @@ export default async function VisitDetailPage(props: {
                 <p className="mt-1 break-all opacity-70">
                   {JSON.stringify(e.data)}
                 </p>
+                {entryQueries
+                  .filter((q) => q.crfEntryId === e.id)
+                  .map((q) => (
+                    <div
+                      key={q.id}
+                      className="mt-2 flex flex-col gap-2 rounded-xl border border-line p-3"
+                    >
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge
+                          tone={
+                            q.status === "open"
+                              ? "warning"
+                              : q.status === "answered"
+                                ? "info"
+                                : "success"
+                          }
+                        >
+                          query {q.status}
+                        </Badge>
+                        <p className="font-medium">{q.question}</p>
+                      </div>
+                      {q.thread.map((m) => (
+                        <p key={m.id} className="opacity-70">
+                          <span className="microlabel">{m.authorRole} </span>
+                          {m.body}
+                        </p>
+                      ))}
+                      {q.status === "open" ? (
+                        <form action={answer} className="flex items-end gap-2">
+                          <input type="hidden" name="queryId" value={q.id} />
+                          <Input
+                            name="body"
+                            required
+                            minLength={2}
+                            placeholder="answer the monitor's query"
+                            className="flex-1"
+                          />
+                          <Button size="sm" variant="outline" type="submit">
+                            Answer
+                          </Button>
+                        </form>
+                      ) : null}
+                      {q.status === "open" ? (
+                        <p className="opacity-50">
+                          approval is blocked until this query is answered
+                        </p>
+                      ) : null}
+                    </div>
+                  ))}
               </div>
               {e.status === "submitted" && canApprove ? (
-                <form action={approve}>
+                <form
+                  action={approve}
+                  className="flex flex-col items-end gap-2"
+                >
                   <input type="hidden" name="entryId" value={e.id} />
+                  <Input
+                    name="password"
+                    type="password"
+                    required
+                    autoComplete="current-password"
+                    placeholder="Password to sign"
+                    className="w-48"
+                  />
                   <Button size="sm" type="submit">
-                    Approve
+                    Sign & approve
                   </Button>
+                  <p className="max-w-[220px] text-right opacity-50">
+                    “{SIGNATURE_MEANINGS.approve}”
+                  </p>
                 </form>
               ) : null}
             </div>

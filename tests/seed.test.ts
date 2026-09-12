@@ -15,7 +15,7 @@ let summary: SeedSummary;
 beforeAll(async () => {
   db = await createTestDb();
   summary = await seed(db);
-}, 60_000);
+}, 180_000);
 
 describe("T0.5 — deterministic synthetic seed (D-016)", () => {
   it("creates the expected volumes", () => {

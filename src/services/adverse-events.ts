@@ -13,18 +13,45 @@ import {
   computeDeadlines,
   type DeadlineRule,
 } from "@/lib/rules/deadlines";
+import { getAlertConfig } from "@/services/settings";
+import { decodeMeddra } from "@/lib/dictionaries/meddra-subset";
+import { decodeWhodrug } from "@/lib/dictionaries/whodrug-subset";
+import {
+  recordSignature,
+  verifySigner,
+  type SignatureRequest,
+} from "@/services/signatures";
 
-export const captureAeInput = z.object({
-  participantId: z.string().uuid(),
-  term: z.string().min(2),
-  seriousness: z.enum(["ae", "sae"]),
-  severity: z.enum(["mild", "moderate", "severe"]),
-  onsetDate: z.coerce.date(),
-  narrative: z.string().optional(),
-  meddraCode: z.string().optional(),
-  whodrugCode: z.string().optional(),
-  causality: z.string().optional(),
-});
+export const captureAeInput = z
+  .object({
+    participantId: z.string().uuid(),
+    term: z.string().min(2),
+    seriousness: z.enum(["ae", "sae"]),
+    severity: z.enum(["mild", "moderate", "severe"]),
+    onsetDate: z.coerce.date(),
+    narrative: z.string().optional(),
+    meddraCode: z.string().optional(),
+    whodrugCode: z.string().optional(),
+    causality: z.string().optional(),
+  })
+  // dictionary coding (D-024): supplied codes must exist in the bundled
+  // demo subsets — free-text codes can no longer enter the record
+  .superRefine((data, ctx) => {
+    if (data.meddraCode && !decodeMeddra(data.meddraCode)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["meddraCode"],
+        message: `unknown MedDRA code '${data.meddraCode}' (demo subset)`,
+      });
+    }
+    if (data.whodrugCode && !decodeWhodrug(data.whodrugCode)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["whodrugCode"],
+        message: `unknown WHODrug code '${data.whodrugCode}' (demo subset)`,
+      });
+    }
+  });
 
 export type CaptureAeInput = z.infer<typeof captureAeInput>;
 
@@ -52,8 +79,11 @@ export async function captureAdverseEvent(
     .limit(1);
   if (!participant) throw new AeError("participant not found");
 
-  // the clock runs from awareness (capture), not onset
-  const deadlines = computeDeadlines(data.seriousness, capturedAt, rules);
+  // the clock runs from awareness (capture), not onset. Rule table comes
+  // from the admin-configurable alert config (D-023) unless the caller
+  // passes explicit rules (tests, backfills).
+  const effectiveRules = rules ?? (await getAlertConfig(db)).deadlineRules;
+  const deadlines = computeDeadlines(data.seriousness, capturedAt, effectiveRules);
 
   return withAudit(db, actor, "ae.capture", async (tx) => {
     const [ae] = await tx
@@ -95,6 +125,7 @@ export async function advanceAeStatus(
   aeId: string,
   to: "under_review" | "reported" | "closed",
   note?: string,
+  signature?: SignatureRequest,
 ) {
   assertCan(actor.role, "ae.review");
   const [ae] = await db
@@ -107,13 +138,19 @@ export async function advanceAeStatus(
   if (!rule.from.includes(ae.status)) {
     throw new AeError(`cannot move AE from '${ae.status}' to '${to}'`);
   }
+  // e-signature (D-022): marking an AE as reported to the authority is a
+  // record-freezing action — it requires a signature; other steps do not
+  if (to === "reported") {
+    await verifySigner(db, actor, signature);
+  }
 
   return withAudit(db, actor, `ae.${rule.action}`, async (tx) => {
+    const reportedAt = to === "reported" ? new Date() : null;
     const [updated] = await tx
       .update(adverseEvents)
       .set({
         status: to,
-        ...(to === "reported" ? { reportedAt: new Date() } : {}),
+        ...(reportedAt ? { reportedAt } : {}),
       })
       .where(eq(adverseEvents.id, aeId))
       .returning();
@@ -123,12 +160,27 @@ export async function advanceAeStatus(
       actorId: actor.id,
       note: note ?? null,
     });
+    let signatureInfo: Record<string, string> = {};
+    if (to === "reported") {
+      const sig = await recordSignature(tx, actor, {
+        entityType: "adverse_event",
+        entityId: aeId,
+        action: "report",
+        payload: {
+          entityId: aeId,
+          term: ae.term,
+          seriousness: ae.seriousness,
+          reportedAt,
+        },
+      });
+      signatureInfo = { signatureId: sig.id, payloadHash: sig.payloadHash };
+    }
     return {
       result: updated,
       entityType: "adverse_event",
       entityId: aeId,
       before: { status: ae.status },
-      after: { status: to },
+      after: { status: to, ...signatureInfo },
     };
   });
 }

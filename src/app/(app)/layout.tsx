@@ -52,9 +52,12 @@ export default async function AppLayout({
 
   return (
     <div className="flex min-h-screen w-full">
-      <Sidebar items={items} />
+      {/* chrome hides when printing — DSMB/SAE report artifacts print clean */}
+      <div className="contents print:hidden">
+        <Sidebar items={items} />
+      </div>
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-10 flex items-center gap-4 border-b border-line bg-surface px-4 py-3 md:px-6">
+        <header className="sticky top-0 z-10 flex items-center gap-4 border-b border-line bg-surface px-4 py-3 md:px-6 print:hidden">
           <label className="relative min-w-0 flex-1 md:max-w-xl">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-40" />
             <input

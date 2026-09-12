@@ -175,6 +175,54 @@ Related docs: [development-plan.md](development-plan.md) · [architecture.md](ar
 - **Rationale:** Real CTRI registration numbers and titles make the demo credible to domain judges while staying inside the SIH problem statement's DPDP mandate: registry metadata is public by design; participant data must be synthetic/de-identified.
 - **Consequences:** `src/db/data/ctri_trials.json` is a committed snapshot (source + scraped_at recorded). Re-scraping is manual and polite. Test gate: `tests/seed-real.test.ts` (CTRI number format, template coverage, synthetic-participant bounds, determinism, idempotency).
 
+## D-022 — Electronic signatures: password re-auth + payload hash (MVP e-sign)
+
+- **Date:** 2026-09-12
+- **Decision:** Record-freezing actions (CRF approve, extraction approve, AE mark-reported) require an electronic signature: the actor re-enters their password (bcrypt-verified), states a fixed signature meaning, and a `signatures` row stores actor, role, entity, action, meaning, a SHA-256 hash of the canonical signed payload, and timestamp — inserted in the same transaction as the guarded mutation.
+- **Alternatives:** Third-party e-sign (DocuSign-style); cryptographic key pairs per user; keep plain authenticated clicks.
+- **Rationale:** The PS demands "electronic-signature and data-integrity controls consistent with GCP"; architecture.md §12 promised this control but nothing existed in code (gap G5). Password re-auth + hash + meaning is the recognisable 21-CFR-11-style shape, achievable in a hackathon with zero external services.
+- **Consequences:** Approval UIs gain a signing dialog; the audit browser shows signature chips. Stated honestly as an MVP e-signature (no PKI, no long-term key custody). Test gate in tasks.md T7.1.
+
+## D-023 — Alert/KPI thresholds become admin-configurable data
+
+- **Date:** 2026-09-12
+- **Decision:** The hardcoded rule constants (`ENROLMENT_LAG_THRESHOLD`, `DEFAULT_DEADLINE_RULES`, AE 24 h warning window, milestone 7-day lookahead, monitoring cadence) move into an `alert_config` document in the existing `app_settings` table, edited from an admin Settings card, Zod-validated, audited, with today's constants as fallback defaults.
+- **Alternatives:** New `alert_rules` table with per-rule rows; environment variables; leave hardcoded.
+- **Rationale:** The PS says "configurable KPIs and alerting" literally (gap G8); `app_settings` already exists for AI config, so the same pattern costs one Zod schema and one settings card.
+- **Consequences:** `sweepAlerts()` and `computeDeadlines()` read config with defaults, so existing tests stay green; new tests cover config-driven behaviour changes.
+
+## D-024 — Bundled demo-subset dictionaries for MedDRA/WHODrug coding
+
+- **Date:** 2026-09-12
+- **Decision:** AE coding uses bundled, clearly-labeled demo subsets shipped as TypeScript modules (`src/lib/dictionaries/`): ~200 MedDRA-like `{code, pt, soc}` terms relevant to Ayurveda trials and an ASU-formulation WHODrug-like list. The AE form gains an autocomplete picker; supplied codes must exist in the subset; SDTM `AEDECOD` and the FHIR AdverseEvent coding consume them.
+- **Alternatives:** License real MedDRA/WHODrug (out of hackathon scope and budget); free-text codes (status quo, gap G1); UMLS/SNOMED as a stand-in.
+- **Rationale:** The PS names MedDRA/WHODrug coding explicitly; the honest hackathon posture (already stated in the development plan's out-of-scope list) is a structurally-faithful demo subset, positioned as swappable for licensed dictionaries in production.
+- **Consequences:** Subsets are code-reviewable data files; the demo must state "demo subset" on the picker. Coding becomes validated, not free text.
+
+## D-025 — NPvCC spontaneous ADR intake is a flagged stretch, not core scope
+
+- **Date:** 2026-09-12
+- **Decision:** A standalone `suspected_adrs` intake (spontaneous ASU&H ADR reports outside trials, per AIIA's NPvCC role) is planned as stretch task T8.3 — built only if demo time allows, after the trial-safety depth (signals, SAE report) lands.
+- **Alternatives:** Treat NPvCC intake as core (PS background implies it); skip entirely.
+- **Rationale:** The PS's *expected solution* list centres trial pharmacovigilance; spontaneous surveillance is background context. Signal aggregation (T8.1) is designed to accept a "spontaneous" source series so the stretch bolts on without rework.
+- **Consequences:** The demo narrative mentions NPvCC readiness either way; the schema for spontaneous reports stays isolated from trial participants (de-identification unaffected). **Resolution (2026-09-13): built** — T8.3 shipped with its test gate; spontaneous reports render in the signal view as the "NPvCC" series.
+
+## D-026 — FHIR REST read API + import-to-draft as the EDC/HIS interoperability demo
+
+- **Date:** 2026-09-12
+- **Decision:** Interoperability goes live (not download-only): authenticated, audited FHIR R4 read endpoints (`GET /api/fhir/ResearchStudy/[id]`, `GET /api/fhir/Bundle/[trialId]`) serving the existing mappers as `application/fhir+json`, plus `POST /api/fhir/import` accepting an Observation bundle that creates a **draft** CRF entry routed through the normal validate→submit→approve (and sign, D-022) path. ABDM is addressed as a documented roadmap (the FHIR endpoints are the ABDM-compatible building block); no mocked ABHA integration.
+- **Alternatives:** Real EDC (REDCap/OpenClinica) integration; HAPI FHIR server; keep export-only.
+- **Rationale:** PS asks for "HL7 FHIR R4 / ABDM interoperability with EDC and the hospital information system" (gap G4). A live endpoint a judge can `curl`, and an import that visibly lands as a reviewable draft, demonstrates conformance without faking an external system; drafts-only preserves the "nothing auto-commits" invariant (D-005 spirit).
+- **Consequences:** Route handlers reuse export mappers (no duplicate mapping logic); import is Zod-gated like AI output. ABHA/ABDM stays out of the de-identified research schema by design.
+
+## D-027 — Deterministic permuted-block randomization replaces free-text arm entry
+
+- **Date:** 2026-09-12
+- **Decision:** Trials carry an `arms` JSONB config (`[{name, ratio}]`, scaffolded at creation); enrolment assigns the arm via a pure permuted-block allocator (`src/lib/rules/randomization.ts`, block size 2×∑ratio, injectable RNG for deterministic tests) instead of accepting a free-text `arm` argument. MVP is open-label — no allocation concealment or blinding is claimed.
+- **Alternatives:** Keep manual arm entry (status quo, gap G7); simple coin-flip randomization (no balance guarantee); external randomization service.
+- **Rationale:** The PS tracks "enrolment and randomization against target"; a real allocator with block balance is small, pure, and unit-testable in the repo's style, and turns a compliance gap into a demonstrable calculation.
+- **Consequences:** `enrolParticipant`'s signature changes (breaking change confined to one service + its callers/tests); allocation details land in the audit snapshot. Blinding/concealment stated plainly as out of MVP scope.
+
 ---
 
 ## Template for new decisions

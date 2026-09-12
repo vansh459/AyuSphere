@@ -48,6 +48,7 @@ export function DoctorNoteClient({
   const [extraction, setExtraction] = useState<Extraction | null>(null);
   const [values, setValues] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Set<string>>(new Set());
+  const [signPassword, setSignPassword] = useState("");
   const [done, setDone] = useState(false);
 
   const flagsByField = useMemo(() => {
@@ -134,10 +135,12 @@ export function DoctorNoteClient({
           extractionId: extraction.id,
           finalData,
           touchedFields: [...touched],
+          password: signPassword,
         }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "approval failed");
+      setSignPassword("");
       setDone(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "approval failed");
@@ -290,12 +293,33 @@ export function DoctorNoteClient({
                       {blockers.join(", ")}
                     </p>
                   ) : null}
+                  {/* e-signature (D-022): password re-auth + meaning statement */}
+                  <div className="flex flex-col gap-2 rounded-xl border border-line p-3">
+                    <Label htmlFor="sign-password">
+                      Electronic signature — re-enter your password
+                    </Label>
+                    <Input
+                      id="sign-password"
+                      type="password"
+                      autoComplete="current-password"
+                      value={signPassword}
+                      onChange={(e) => setSignPassword(e.target.value)}
+                      placeholder="Password"
+                    />
+                    <p className="opacity-50">
+                      “I approve this record as accurate and complete.”
+                    </p>
+                  </div>
                   <div className="flex gap-3">
                     <Button
                       onClick={approve}
-                      disabled={busy !== null || blockers.length > 0}
+                      disabled={
+                        busy !== null ||
+                        blockers.length > 0 ||
+                        signPassword.length === 0
+                      }
                     >
-                      {busy === "approve" ? "Committing…" : "Approve as record"}
+                      {busy === "approve" ? "Committing…" : "Sign & approve as record"}
                     </Button>
                     <Button
                       variant="outline"

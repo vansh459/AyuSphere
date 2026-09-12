@@ -5,8 +5,11 @@ import { requireActor, withError } from "@/lib/actor";
 import { getDb } from "@/db";
 import { documents, trials } from "@/db/schema";
 import { transitionTrial } from "@/services/trials";
+import { decideAmendment, pendingAmendments } from "@/services/amendments";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   DbErrorState,
   EmptyState,
@@ -23,11 +26,13 @@ export default async function EthicsPage(props: {
 
   let queue: (typeof trials.$inferSelect)[] = [];
   let decided: (typeof trials.$inferSelect)[] = [];
+  let amendmentQueue: Awaited<ReturnType<typeof pendingAmendments>> = [];
   let protocolByTrial = new Map<string, string>();
   let dbError = false;
   try {
     const db = getDb();
     queue = await db.select().from(trials).where(eq(trials.status, "iec_review"));
+    amendmentQueue = await pendingAmendments(db);
     decided = await db
       .select()
       .from(trials)
@@ -62,6 +67,24 @@ export default async function EthicsPage(props: {
     }
     revalidatePath("/ethics");
     revalidatePath("/trials");
+    redirect("/ethics");
+  }
+
+  async function decideAmendmentAction(formData: FormData) {
+    "use server";
+    const actor = await requireActor("trial.ethicsReview");
+    try {
+      await decideAmendment(
+        getDb(),
+        actor,
+        String(formData.get("amendmentId")),
+        formData.get("decision") === "approve" ? "approved" : "returned",
+        String(formData.get("comment") ?? "").trim() || undefined,
+      );
+    } catch (e) {
+      redirect(withError("/ethics", e));
+    }
+    revalidatePath("/ethics");
     redirect("/ethics");
   }
 
@@ -116,6 +139,58 @@ export default async function EthicsPage(props: {
                       </Button>
                     </form>
                   </div>
+                </div>
+              ))
+            )}
+          </Card>
+
+          <Card className="flex flex-col gap-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <CardTitle className="text-body font-bold">
+                Amendment queue ({amendmentQueue.length})
+              </CardTitle>
+              <Badge tone="info">protocol changes need IEC approval (T10.3)</Badge>
+            </div>
+            {amendmentQueue.length === 0 ? (
+              <p className="opacity-70">No amendments awaiting review.</p>
+            ) : (
+              amendmentQueue.map(({ amendment, protocolCode, trialTitle }) => (
+                <div
+                  key={amendment.id}
+                  className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4 last:border-0 last:pb-0"
+                >
+                  <div className="min-w-0">
+                    <p className="font-bold">
+                      {protocolCode} · Amendment v{amendment.versionNumber}
+                    </p>
+                    <p className="mt-1 opacity-70">{amendment.summary}</p>
+                    <p className="mt-1 opacity-50">
+                      {trialTitle} · submitted{" "}
+                      {amendment.createdAt.toLocaleDateString()}
+                    </p>
+                  </div>
+                  <form
+                    action={decideAmendmentAction}
+                    className="flex flex-wrap items-end gap-2"
+                  >
+                    <input type="hidden" name="amendmentId" value={amendment.id} />
+                    <Input
+                      name="comment"
+                      placeholder="comment (required to return)"
+                      className="w-56"
+                    />
+                    <Button type="submit" name="decision" value="approve">
+                      Approve
+                    </Button>
+                    <Button
+                      type="submit"
+                      name="decision"
+                      value="return"
+                      variant="outline"
+                    >
+                      Return
+                    </Button>
+                  </form>
                 </div>
               ))
             )}

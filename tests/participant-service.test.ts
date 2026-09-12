@@ -48,13 +48,23 @@ beforeAll(async () => {
       { visitNumber: 3, name: "Week 12", dayOffset: 84, windowDays: 7 },
     ],
   });
-  await db.insert(documents).values({
-    trialId: trial.id,
-    kind: "protocol",
-    title: "Protocol v1",
-    blobUrl: "blob://p",
-    uploadedBy: pi.id,
-  });
+  await db.insert(documents).values([
+    {
+      trialId: trial.id,
+      kind: "protocol",
+      title: "Protocol v1",
+      blobUrl: "blob://p",
+      uploadedBy: pi.id,
+    },
+    // consent binding (T10.4): recording consent needs a form on file
+    {
+      trialId: trial.id,
+      kind: "consent_form",
+      title: "Consent form v1",
+      blobUrl: "blob://c1",
+      uploadedBy: pi.id,
+    },
+  ]);
   await transitionTrial(db, pi, trial.id, "iec_review");
   await transitionTrial(db, ethics, trial.id, "iec_approved");
   await transitionTrial(db, pi, trial.id, "ctri_registered", {
@@ -102,7 +112,7 @@ describe("T1.4 — enrolment guards (each independently)", () => {
   it("refuses without screening pass", async () => {
     const p = await addParticipant(db, pi, activeTsId);
     await recordConsent(db, pi, p.id);
-    await expect(enrolParticipant(db, pi, p.id, "intervention")).rejects.toThrow(
+    await expect(enrolParticipant(db, pi, p.id)).rejects.toThrow(
       /screening/,
     );
   });
@@ -110,7 +120,7 @@ describe("T1.4 — enrolment guards (each independently)", () => {
   it("refuses without consent", async () => {
     const p = await addParticipant(db, pi, activeTsId);
     await recordScreening(db, pi, p.id, true);
-    await expect(enrolParticipant(db, pi, p.id, "intervention")).rejects.toThrow(
+    await expect(enrolParticipant(db, pi, p.id)).rejects.toThrow(
       /consent/,
     );
   });
@@ -119,7 +129,7 @@ describe("T1.4 — enrolment guards (each independently)", () => {
     const p = await addParticipant(db, pi, pendingTsId);
     await recordScreening(db, pi, p.id, true);
     await recordConsent(db, pi, p.id);
-    await expect(enrolParticipant(db, pi, p.id, "control")).rejects.toThrow(
+    await expect(enrolParticipant(db, pi, p.id)).rejects.toThrow(
       /site is not activated/,
     );
   });
@@ -129,7 +139,7 @@ describe("T1.4 — enrolment guards (each independently)", () => {
     await recordScreening(db, pi, p.id, false);
     await recordConsent(db, pi, p.id);
     await expect(
-      enrolParticipant(db, pi, p.id, "intervention"),
+      enrolParticipant(db, pi, p.id),
     ).rejects.toThrow(EnrolmentError);
   });
 });
@@ -139,7 +149,7 @@ describe("T1.4 — enrolment generates the visit schedule", () => {
     const p = await addParticipant(db, pi, activeTsId);
     await recordScreening(db, pi, p.id, true);
     await recordConsent(db, pi, p.id);
-    const enrolled = await enrolParticipant(db, pi, p.id, "intervention");
+    const enrolled = await enrolParticipant(db, pi, p.id);
     expect(enrolled.status).toBe("enrolled");
 
     const vs = await db
@@ -161,8 +171,8 @@ describe("T1.4 — enrolment generates the visit schedule", () => {
     const p = await addParticipant(db, pi, activeTsId);
     await recordScreening(db, pi, p.id, true);
     await recordConsent(db, pi, p.id);
-    await enrolParticipant(db, pi, p.id, "control");
-    await expect(enrolParticipant(db, pi, p.id, "control")).rejects.toThrow(
+    await enrolParticipant(db, pi, p.id);
+    await expect(enrolParticipant(db, pi, p.id)).rejects.toThrow(
       /already enrolled/,
     );
   });
@@ -173,7 +183,7 @@ describe("T1.4 — withdrawal", () => {
     const p = await addParticipant(db, pi, activeTsId);
     await recordScreening(db, pi, p.id, true);
     await recordConsent(db, pi, p.id);
-    await enrolParticipant(db, pi, p.id, "intervention");
+    await enrolParticipant(db, pi, p.id);
 
     // complete the baseline manually
     const vs = await db

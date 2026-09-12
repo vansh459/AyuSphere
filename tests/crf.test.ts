@@ -13,6 +13,7 @@ import {
 } from "@/db/schema";
 import type { Actor } from "@/lib/audit";
 import { RbacError } from "@/lib/rbac";
+import { hashPassword } from "@/lib/auth-core";
 import { validateCrfData, type CrfField } from "@/lib/crf";
 import {
   CrfError,
@@ -57,6 +58,9 @@ describe("T1.6 — Zod factory (pure)", () => {
   });
 });
 
+// e-signature (D-022): approvals/corrections re-verify the signer's password
+const PW = "Sign@1234";
+
 describe("T1.6 — entry service lifecycle on PGlite", () => {
   let db: TestDb;
   let pi: Actor, coordinator: Actor;
@@ -64,11 +68,12 @@ describe("T1.6 — entry service lifecycle on PGlite", () => {
 
   beforeAll(async () => {
     db = await createTestDb();
+    const hash = await hashPassword(PW);
     const userRows = await db
       .insert(users)
       .values([
-        { email: "pi@c.demo", passwordHash: "x", name: "PI", role: "pi" },
-        { email: "co@c.demo", passwordHash: "x", name: "CO", role: "coordinator" },
+        { email: "pi@c.demo", passwordHash: hash, name: "PI", role: "pi" },
+        { email: "co@c.demo", passwordHash: hash, name: "CO", role: "coordinator" },
       ])
       .returning();
     pi = { id: userRows[0].id, role: "pi" };
@@ -145,10 +150,10 @@ describe("T1.6 — entry service lifecycle on PGlite", () => {
     expect(submitted.status).toBe("submitted");
 
     // coordinator cannot approve
-    await expect(approveEntry(db, coordinator, draft.id)).rejects.toThrow(
-      RbacError,
-    );
-    const approved = await approveEntry(db, pi, draft.id);
+    await expect(
+      approveEntry(db, coordinator, draft.id, { password: PW }),
+    ).rejects.toThrow(RbacError);
+    const approved = await approveEntry(db, pi, draft.id, { password: PW });
     expect(approved.status).toBe("approved");
     expect(approved.approvedBy).toBe(pi.id);
   });
@@ -161,9 +166,9 @@ describe("T1.6 — entry service lifecycle on PGlite", () => {
     await expect(submitEntry(db, coordinator, entry.id)).rejects.toThrow(
       /cannot submit/,
     );
-    await expect(approveEntry(db, pi, entry.id)).rejects.toThrow(
-      /cannot approve/,
-    );
+    await expect(
+      approveEntry(db, pi, entry.id, { password: PW }),
+    ).rejects.toThrow(/cannot approve/);
   });
 
   it("correction creates a linked new version and supersedes the old", async () => {
@@ -174,13 +179,22 @@ describe("T1.6 — entry service lifecycle on PGlite", () => {
 
     // coordinator lacks crf.approve
     await expect(
-      correctEntry(db, coordinator, entry.id, { sbp: 130, dose_mg: 250 }),
+      correctEntry(
+        db,
+        coordinator,
+        entry.id,
+        { sbp: 130, dose_mg: 250 },
+        { password: PW },
+      ),
     ).rejects.toThrow(RbacError);
 
-    const v2 = await correctEntry(db, pi, entry.id, {
-      sbp: 130,
-      dose_mg: 250,
-    });
+    const v2 = await correctEntry(
+      db,
+      pi,
+      entry.id,
+      { sbp: 130, dose_mg: 250 },
+      { password: PW },
+    );
     expect(v2.version).toBe(entry.version + 1);
     expect(v2.supersedesId).toBe(entry.id);
     expect(v2.status).toBe("approved");
@@ -200,7 +214,7 @@ describe("T1.6 — entry service lifecycle on PGlite", () => {
       .from(crfEntries)
       .where(eq(crfEntries.status, "approved"));
     await expect(
-      correctEntry(db, pi, v2.id, { sbp: 9999, dose_mg: 250 }),
+      correctEntry(db, pi, v2.id, { sbp: 9999, dose_mg: 250 }, { password: PW }),
     ).rejects.toThrow(CrfError);
   });
 });

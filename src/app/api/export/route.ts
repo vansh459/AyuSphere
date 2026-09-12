@@ -7,12 +7,13 @@ import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { can } from "@/lib/rbac";
 import { getDb } from "@/db";
-import { auditEvents, trials } from "@/db/schema";
+import { auditEvents, crfTemplates, trials } from "@/db/schema";
 import { buildTrialBundle } from "@/services/export/fhir";
+import { buildAdsl } from "@/services/export/adam";
 import {
   buildAeDomain,
   buildDmDomain,
-  defineXmlStub,
+  defineXml,
 } from "@/services/export/sdtm";
 
 export async function GET(req: Request) {
@@ -26,9 +27,9 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const trialId = url.searchParams.get("trialId") ?? "";
   const format = url.searchParams.get("format") ?? "";
-  if (!trialId || !["fhir", "dm", "ae", "define"].includes(format)) {
+  if (!trialId || !["fhir", "dm", "ae", "adsl", "define"].includes(format)) {
     return NextResponse.json(
-      { error: "trialId and format (fhir|dm|ae|define) required" },
+      { error: "trialId and format (fhir|dm|ae|adsl|define) required" },
       { status: 400 },
     );
   }
@@ -58,8 +59,17 @@ export async function GET(req: Request) {
     body = (await buildAeDomain(db, trialId)).csv;
     contentType = "text/csv";
     filename = `${trial.protocolCode}-sdtm-ae.csv`;
+  } else if (format === "adsl") {
+    body = (await buildAdsl(db, trialId)).csv;
+    contentType = "text/csv";
+    filename = `${trial.protocolCode}-adam-adsl.csv`;
   } else {
-    body = defineXmlStub(trial.protocolCode);
+    // real variable-level metadata (T9.1): CRF templates feed the ItemDefs
+    const templates = await db
+      .select()
+      .from(crfTemplates)
+      .where(eq(crfTemplates.trialId, trialId));
+    body = defineXml(trial, templates);
     contentType = "application/xml";
     filename = `${trial.protocolCode}-define.xml`;
   }

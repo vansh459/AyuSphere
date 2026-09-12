@@ -27,6 +27,7 @@ export const CAPABILITIES = [
   "ae.capture",
   "ae.review", // PV review / report / close
   "monitoring.log",
+  "query.manage", // raise/close data queries on CRF entries (monitor's loop)
   "alert.acknowledge",
   "copilot.use",
   "chat.use", // internal user-to-user messaging — communication, not a clinical-record mutation
@@ -64,7 +65,13 @@ const MATRIX: Record<Role, readonly Capability[]> = {
     "chat.use",
     "document.upload",
   ],
-  monitor: ["dashboard.view", "monitoring.log", "alert.acknowledge", "chat.use"],
+  monitor: [
+    "dashboard.view",
+    "monitoring.log",
+    "query.manage",
+    "alert.acknowledge",
+    "chat.use",
+  ],
   ethics: ["dashboard.view", "trial.ethicsReview", "chat.use"],
   pv: [
     "dashboard.view",
@@ -93,6 +100,7 @@ export const MUTATING_CAPABILITIES: readonly Capability[] = [
   "ae.capture",
   "ae.review",
   "monitoring.log",
+  "query.manage",
   "alert.acknowledge",
   "document.upload",
   "users.manage",

@@ -22,6 +22,48 @@
       "when": 1789208133808,
       "tag": "0002_careful_captain_america",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1789233267950,
+      "tag": "0003_boring_songbird",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1789239528012,
+      "tag": "0004_happy_paibok",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1789241882512,
+      "tag": "0005_superb_the_executioner",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1789246813180,
+      "tag": "0006_lowly_blink",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1789248433276,
+      "tag": "0007_curved_domino",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1789249223207,
+      "tag": "0008_lively_james_howlett",
+      "breakpoints": true
     }
   ]
 }

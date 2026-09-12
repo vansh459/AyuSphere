@@ -11,6 +11,8 @@ import {
   trialSites,
   trials,
 } from "@/db/schema";
+import { decodeMeddra } from "@/lib/dictionaries/meddra-subset";
+import { parseTemplateFields, type CrfField } from "@/lib/crf";
 
 export const DM_COLUMNS = [
   "STUDYID",
@@ -121,7 +123,8 @@ export async function buildAeDomain(db: Db, trialId: string) {
       USUBJID: subject.subjectCode,
       AESEQ: String(n),
       AETERM: ae.term,
-      AEDECOD: ae.meddraCode ?? "",
+      // AEDECOD is the dictionary-derived Preferred Term (D-024), not the code
+      AEDECOD: decodeMeddra(ae.meddraCode)?.pt ?? "",
       AESER: ae.seriousness === "sae" ? "Y" : "N",
       AESEV: ae.severity.toUpperCase(),
       AESTDTC: isoDate(ae.onsetDate),
@@ -131,24 +134,230 @@ export async function buildAeDomain(db: Db, trialId: string) {
   return { columns: AE_COLUMNS, rows, csv: toCsv(AE_COLUMNS, rows) };
 }
 
-/** Define-XML stub describing the two exported domains (roadmap: full ODM). */
-export function defineXmlStub(protocolCode: string): string {
+// ---------- Define-XML (T9.1 — real variable-level metadata) ----------
+
+export type DefineDataType = "text" | "integer" | "float" | "date";
+
+export type DefineItem = {
+  oid: string;
+  name: string;
+  label: string;
+  dataType: DefineDataType;
+  length?: number;
+  codeListOid?: string;
+  mandatory: boolean;
+};
+
+export type DefineCodeList = {
+  oid: string;
+  name: string;
+  /** [codedValue, decode] pairs */
+  items: [string, string][];
+};
+
+export const DEFINE_CODE_LISTS: DefineCodeList[] = [
+  { oid: "CL.NY", name: "No Yes Response", items: [["N", "No"], ["Y", "Yes"]] },
+  {
+    oid: "CL.AESEV",
+    name: "Severity/Intensity Scale for Adverse Events",
+    items: [["MILD", "Mild"], ["MODERATE", "Moderate"], ["SEVERE", "Severe"]],
+  },
+  { oid: "CL.COUNTRY", name: "Country", items: [["IND", "India"]] },
+  {
+    oid: "CL.EOSSTT",
+    name: "End of Study Status",
+    items: [
+      ["COMPLETED", "Completed"],
+      ["DISCONTINUED", "Discontinued"],
+      ["ONGOING", "Ongoing"],
+      ["NOT STARTED", "Not started (screening)"],
+    ],
+  },
+];
+
+/** DM variable metadata — 1:1 with DM_COLUMNS (tested) */
+export const DM_ITEMS: DefineItem[] = [
+  { oid: "IT.DM.STUDYID", name: "STUDYID", label: "Study Identifier", dataType: "text", length: 20, mandatory: true },
+  { oid: "IT.DM.DOMAIN", name: "DOMAIN", label: "Domain Abbreviation", dataType: "text", length: 2, mandatory: true },
+  { oid: "IT.DM.USUBJID", name: "USUBJID", label: "Unique Subject Identifier", dataType: "text", length: 40, mandatory: true },
+  { oid: "IT.DM.SUBJID", name: "SUBJID", label: "Subject Identifier for the Study", dataType: "text", length: 20, mandatory: true },
+  { oid: "IT.DM.RFSTDTC", name: "RFSTDTC", label: "Subject Reference Start Date/Time", dataType: "date", mandatory: false },
+  { oid: "IT.DM.ARM", name: "ARM", label: "Description of Planned Arm", dataType: "text", length: 40, mandatory: false },
+  { oid: "IT.DM.ARMCD", name: "ARMCD", label: "Planned Arm Code", dataType: "text", length: 8, mandatory: false },
+  { oid: "IT.DM.COUNTRY", name: "COUNTRY", label: "Country", dataType: "text", length: 3, codeListOid: "CL.COUNTRY", mandatory: true },
+];
+
+/** AE variable metadata — 1:1 with AE_COLUMNS (tested) */
+export const AE_ITEMS: DefineItem[] = [
+  { oid: "IT.AE.STUDYID", name: "STUDYID", label: "Study Identifier", dataType: "text", length: 20, mandatory: true },
+  { oid: "IT.AE.DOMAIN", name: "DOMAIN", label: "Domain Abbreviation", dataType: "text", length: 2, mandatory: true },
+  { oid: "IT.AE.USUBJID", name: "USUBJID", label: "Unique Subject Identifier", dataType: "text", length: 40, mandatory: true },
+  { oid: "IT.AE.AESEQ", name: "AESEQ", label: "Sequence Number", dataType: "integer", mandatory: true },
+  { oid: "IT.AE.AETERM", name: "AETERM", label: "Reported Term for the Adverse Event", dataType: "text", length: 200, mandatory: true },
+  { oid: "IT.AE.AEDECOD", name: "AEDECOD", label: "Dictionary-Derived Term (MedDRA PT, demo subset)", dataType: "text", length: 200, mandatory: false },
+  { oid: "IT.AE.AESER", name: "AESER", label: "Serious Event", dataType: "text", length: 1, codeListOid: "CL.NY", mandatory: true },
+  { oid: "IT.AE.AESEV", name: "AESEV", label: "Severity/Intensity", dataType: "text", length: 8, codeListOid: "CL.AESEV", mandatory: false },
+  { oid: "IT.AE.AESTDTC", name: "AESTDTC", label: "Start Date/Time of Adverse Event", dataType: "date", mandatory: true },
+  { oid: "IT.AE.AEOUT", name: "AEOUT", label: "Outcome of Adverse Event", dataType: "text", length: 100, mandatory: false },
+];
+
+// ADaM ADSL metadata (T9.2) lives beside the other Define metadata; the
+// dataset builder is src/services/export/adam.ts (imports from here — one
+// direction only, no cycle).
+export const ADSL_COLUMNS = [
+  "STUDYID",
+  "USUBJID",
+  "SUBJID",
+  "SITEID",
+  "ARM",
+  "ARMCD",
+  "TRTSDT",
+  "EOSSTT",
+  "DCSREAS",
+  "SAFFL",
+] as const;
+
+/** ADSL variable metadata — 1:1 with ADSL_COLUMNS (tested) */
+export const ADSL_ITEMS: DefineItem[] = [
+  { oid: "IT.ADSL.STUDYID", name: "STUDYID", label: "Study Identifier", dataType: "text", length: 20, mandatory: true },
+  { oid: "IT.ADSL.USUBJID", name: "USUBJID", label: "Unique Subject Identifier", dataType: "text", length: 40, mandatory: true },
+  { oid: "IT.ADSL.SUBJID", name: "SUBJID", label: "Subject Identifier for the Study", dataType: "text", length: 20, mandatory: true },
+  { oid: "IT.ADSL.SITEID", name: "SITEID", label: "Study Site Identifier", dataType: "text", length: 60, mandatory: true },
+  { oid: "IT.ADSL.ARM", name: "ARM", label: "Description of Planned Arm", dataType: "text", length: 40, mandatory: false },
+  { oid: "IT.ADSL.ARMCD", name: "ARMCD", label: "Planned Arm Code", dataType: "text", length: 8, mandatory: false },
+  { oid: "IT.ADSL.TRTSDT", name: "TRTSDT", label: "Date of First Exposure to Treatment (enrolment)", dataType: "date", mandatory: false },
+  { oid: "IT.ADSL.EOSSTT", name: "EOSSTT", label: "End of Study Status", dataType: "text", length: 12, codeListOid: "CL.EOSSTT", mandatory: true },
+  { oid: "IT.ADSL.DCSREAS", name: "DCSREAS", label: "Reason for Discontinuation from Study", dataType: "text", length: 200, mandatory: false },
+  { oid: "IT.ADSL.SAFFL", name: "SAFFL", label: "Safety Population Flag", dataType: "text", length: 1, codeListOid: "CL.NY", mandatory: true },
+];
+
+function xmlEscape(v: string): string {
+  return v
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
+const CRF_TYPE_MAP: Record<CrfField["type"], DefineDataType> = {
+  number: "float",
+  text: "text",
+  date: "date",
+  select: "text",
+};
+
+/** a CRF template's fields (cdashVar-named) → Define items for its ItemGroup */
+export function crfTemplateItems(
+  templateIndex: number,
+  fields: CrfField[],
+): DefineItem[] {
+  return fields.map((f) => ({
+    oid: `IT.CRF${templateIndex}.${f.cdashVar}`,
+    name: f.cdashVar,
+    label: `${f.label}${f.unit ? ` (${f.unit})` : ""}${
+      f.min !== undefined ? ` [plausible ${f.min}–${f.max}]` : ""
+    }`,
+    dataType: CRF_TYPE_MAP[f.type],
+    ...(f.type === "text" || f.type === "select" ? { length: 200 } : {}),
+    mandatory: f.required,
+  }));
+}
+
+function itemRefXml(items: DefineItem[]): string {
+  return items
+    .map(
+      (it, i) =>
+        `<ItemRef ItemOID="${it.oid}" OrderNumber="${i + 1}" Mandatory="${it.mandatory ? "Yes" : "No"}"/>`,
+    )
+    .join("\n        ");
+}
+
+function itemDefXml(items: DefineItem[]): string {
+  return items
+    .map(
+      (it) => `<ItemDef OID="${it.oid}" Name="${xmlEscape(it.name)}" DataType="${it.dataType}"${
+        it.length !== undefined ? ` Length="${it.length}"` : ""
+      }>
+        <Description><TranslatedText xml:lang="en">${xmlEscape(it.label)}</TranslatedText></Description>
+        ${it.codeListOid ? `<CodeListRef CodeListOID="${it.codeListOid}"/>` : ""}
+      </ItemDef>`,
+    )
+    .join("\n      ");
+}
+
+function codeListXml(lists: DefineCodeList[]): string {
+  return lists
+    .map(
+      (cl) => `<CodeList OID="${cl.oid}" Name="${xmlEscape(cl.name)}" DataType="text">
+        ${cl.items
+          .map(
+            ([value, decode]) =>
+              `<CodeListItem CodedValue="${xmlEscape(value)}"><Decode><TranslatedText xml:lang="en">${xmlEscape(decode)}</TranslatedText></Decode></CodeListItem>`,
+          )
+          .join("\n        ")}
+      </CodeList>`,
+    )
+    .join("\n      ");
+}
+
+export type DefineTemplateInput = {
+  name: string;
+  visitType: string;
+  fields: unknown;
+};
+
+/**
+ * Define-XML with real variable-level metadata (T9.1): ItemDefs carrying
+ * DataType/Length/labels and CodeLists for the exported SDTM DM/AE domains,
+ * plus one ItemGroup per CRF template whose ItemDefs derive from the
+ * template's cdashVar-named field rules (D-012/D-017 — capture metadata IS
+ * the submission metadata). ODM 1.3 structure; full def:2.x stylesheet
+ * packaging remains a stated roadmap item.
+ */
+export function defineXml(
+  trial: { protocolCode: string; title: string },
+  templates: DefineTemplateInput[] = [],
+): string {
+  const crfGroups = templates.map((t, i) => ({
+    oid: `IG.CRF${i + 1}`,
+    name: `${t.visitType} — ${t.name}`,
+    items: crfTemplateItems(i + 1, parseTemplateFields(t.fields)),
+  }));
+  const allItems = [
+    ...DM_ITEMS,
+    ...AE_ITEMS,
+    ...ADSL_ITEMS,
+    ...crfGroups.flatMap((g) => g.items),
+  ];
+
   return `<?xml version="1.0" encoding="UTF-8"?>
 <ODM xmlns="http://www.cdisc.org/ns/odm/v1.3" FileType="Snapshot"
-     FileOID="${protocolCode}.define" CreationDateTime="${new Date().toISOString()}">
-  <Study OID="${protocolCode}">
+     FileOID="${xmlEscape(trial.protocolCode)}.define" CreationDateTime="${new Date().toISOString()}">
+  <Study OID="${xmlEscape(trial.protocolCode)}">
     <GlobalVariables>
-      <StudyName>${protocolCode}</StudyName>
-      <StudyDescription>AyuSphere SDTM export (focused subset: DM, AE)</StudyDescription>
-      <ProtocolName>${protocolCode}</ProtocolName>
+      <StudyName>${xmlEscape(trial.protocolCode)}</StudyName>
+      <StudyDescription>${xmlEscape(trial.title)} — AyuSphere SDTM export (DM, AE) with CRF capture metadata</StudyDescription>
+      <ProtocolName>${xmlEscape(trial.protocolCode)}</ProtocolName>
     </GlobalVariables>
-    <MetaDataVersion OID="MDV.1" Name="SDTM subset">
+    <MetaDataVersion OID="MDV.1" Name="SDTM subset + ADaM ADSL + CRF capture metadata">
       <ItemGroupDef OID="IG.DM" Name="DM" Repeating="No" Purpose="Tabulation">
-        ${DM_COLUMNS.map((c) => `<ItemRef ItemOID="IT.DM.${c}" Mandatory="No"/>`).join("\n        ")}
+        ${itemRefXml(DM_ITEMS)}
       </ItemGroupDef>
       <ItemGroupDef OID="IG.AE" Name="AE" Repeating="Yes" Purpose="Tabulation">
-        ${AE_COLUMNS.map((c) => `<ItemRef ItemOID="IT.AE.${c}" Mandatory="No"/>`).join("\n        ")}
+        ${itemRefXml(AE_ITEMS)}
       </ItemGroupDef>
+      <ItemGroupDef OID="IG.ADSL" Name="ADSL" Repeating="No" Purpose="Analysis">
+        ${itemRefXml(ADSL_ITEMS)}
+      </ItemGroupDef>
+      ${crfGroups
+        .map(
+          (g) => `<ItemGroupDef OID="${g.oid}" Name="${xmlEscape(g.name)}" Repeating="Yes" Purpose="Tabulation">
+        ${itemRefXml(g.items)}
+      </ItemGroupDef>`,
+        )
+        .join("\n      ")}
+      ${itemDefXml(allItems)}
+      ${codeListXml(DEFINE_CODE_LISTS)}
     </MetaDataVersion>
   </Study>
 </ODM>

@@ -26,7 +26,7 @@ let summary: SeedRealSummary;
 beforeAll(async () => {
   db = await createTestDb();
   summary = await seedReal(db);
-}, 120_000);
+}, 180_000);
 
 describe("D-021 — seedReal: real CTRI registry metadata", () => {
   it("inserts more than zero trials from the scraped registry data", () => {

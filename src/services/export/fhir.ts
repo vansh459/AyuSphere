@@ -11,6 +11,7 @@ import {
   trialSites,
   trials,
 } from "@/db/schema";
+import { decodeMeddra } from "@/lib/dictionaries/meddra-subset";
 
 type TrialRow = typeof trials.$inferSelect;
 type ParticipantRow = typeof participants.$inferSelect;
@@ -85,6 +86,7 @@ export function toResearchSubject(p: ParticipantRow, trialId: string) {
 }
 
 export function toAdverseEvent(ae: AeRow) {
+  const meddra = decodeMeddra(ae.meddraCode);
   return {
     resourceType: "AdverseEvent" as const,
     id: ae.id,
@@ -95,7 +97,11 @@ export function toAdverseEvent(ae: AeRow) {
       ...(ae.meddraCode
         ? {
             coding: [
-              { system: "http://terminology.hl7.org/CodeSystem/meddra", code: ae.meddraCode },
+              {
+                system: "http://terminology.hl7.org/CodeSystem/meddra",
+                code: ae.meddraCode,
+                ...(meddra ? { display: meddra.pt } : {}),
+              },
             ],
           }
         : {}),

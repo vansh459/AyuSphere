@@ -4,8 +4,9 @@ AI-assisted Clinical Research Intelligence Platform for Ayurveda — SIH26046
 (AIIA Clinical Trials Dashboard). Team **Bob The Builder**.
 
 Full documentation lives in [`docs/`](docs/): development plan,
-architecture, technology, application workflows, ADR decision log, and the
-test-gated task board.
+architecture, technology, application workflows, ADR decision log, the
+test-gated task board, and the [PS gap analysis](docs/gap-analysis.md) with
+its [gap-fill plan](docs/gap-plan.md) (Phases 7–10).
 
 ## Stack
 

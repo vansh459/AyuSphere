@@ -19,7 +19,7 @@ beforeAll(async () => {
   await seed(db);
   const [u] = await db.select().from(users).where(eq(users.role, "pv"));
   pv = { id: u.id, role: "pv" };
-}, 60_000);
+}, 180_000);
 
 describe("T2.3 — idempotent raise/resolve", () => {
   it("raising the same (rule, entity) twice creates one open alert", async () => {

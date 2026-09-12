@@ -9,6 +9,12 @@ import { crfEntries, crfTemplates, visits } from "@/db/schema";
 import { withAudit, type Actor } from "@/lib/audit";
 import { assertCan } from "@/lib/rbac";
 import { parseTemplateFields, validateCrfData } from "@/lib/crf";
+import {
+  recordSignature,
+  verifySigner,
+  type SignatureRequest,
+} from "@/services/signatures";
+import { hasOpenQuery } from "@/services/data-queries";
 
 export class CrfError extends Error {
   readonly issues?: { field: string; message: string }[];
@@ -95,7 +101,12 @@ export async function submitEntry(db: Db, actor: Actor, entryId: string) {
   });
 }
 
-export async function approveEntry(db: Db, actor: Actor, entryId: string) {
+export async function approveEntry(
+  db: Db,
+  actor: Actor,
+  entryId: string,
+  signature: SignatureRequest,
+) {
   assertCan(actor.role, "crf.approve");
   const [entry] = await db
     .select()
@@ -106,6 +117,15 @@ export async function approveEntry(db: Db, actor: Actor, entryId: string) {
   if (entry.status !== "submitted") {
     throw new CrfError(`cannot approve an entry in status '${entry.status}'`);
   }
+  // an open data query (T10.1) must be answered before the record freezes
+  if (await hasOpenQuery(db, entryId)) {
+    throw new CrfError(
+      "an open data query on this entry must be answered before approval",
+    );
+  }
+  // e-signature (D-022): re-auth BEFORE the transaction — a refused
+  // signature leaves the record untouched and unaudited
+  await verifySigner(db, actor, signature);
 
   return withAudit(db, actor, "crf.approve", async (tx) => {
     const [updated] = await tx
@@ -113,12 +133,23 @@ export async function approveEntry(db: Db, actor: Actor, entryId: string) {
       .set({ status: "approved", approvedBy: actor.id, approvedAt: new Date() })
       .where(eq(crfEntries.id, entryId))
       .returning();
+    const sig = await recordSignature(tx, actor, {
+      entityType: "crf_entry",
+      entityId: entryId,
+      action: "approve",
+      payload: { entityId: entryId, data: updated.data, version: updated.version },
+    });
     return {
       result: updated,
       entityType: "crf_entry",
       entityId: entryId,
       before: { status: "submitted" },
-      after: { status: "approved", approvedBy: actor.id },
+      after: {
+        status: "approved",
+        approvedBy: actor.id,
+        signatureId: sig.id,
+        payloadHash: sig.payloadHash,
+      },
     };
   });
 }
@@ -133,6 +164,7 @@ export async function correctEntry(
   actor: Actor,
   entryId: string,
   newData: Record<string, unknown>,
+  signature: SignatureRequest,
 ) {
   assertCan(actor.role, "crf.approve");
   const [entry] = await db
@@ -147,6 +179,8 @@ export async function correctEntry(
   const { fields } = await loadVisitTemplate(db, entry.visitId);
   const check = validateCrfData(fields, newData, "submit");
   if (!check.ok) throw new CrfError("invalid correction", check.issues);
+  // a correction freezes a new approved version — it is signed like one
+  await verifySigner(db, actor, signature);
 
   return withAudit(db, actor, "crf.correct", async (tx) => {
     await tx
@@ -168,12 +202,23 @@ export async function correctEntry(
         approvedAt: new Date(),
       })
       .returning();
+    const sig = await recordSignature(tx, actor, {
+      entityType: "crf_entry",
+      entityId: next.id,
+      action: "correct",
+      payload: { entityId: next.id, data: check.data, version: next.version },
+    });
     return {
       result: next,
       entityType: "crf_entry",
       entityId: next.id,
       before: { supersedes: entry.id, data: entry.data },
-      after: { version: next.version, data: check.data },
+      after: {
+        version: next.version,
+        data: check.data,
+        signatureId: sig.id,
+        payloadHash: sig.payloadHash,
+      },
     };
   });
 }

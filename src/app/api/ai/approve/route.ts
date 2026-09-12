@@ -15,6 +15,8 @@ const bodySchema = z.union([
     extractionId: z.string().uuid(),
     finalData: z.record(z.string(), z.unknown()),
     touchedFields: z.array(z.string()),
+    // e-signature (D-022): approval is signed with the reviewer's password
+    password: z.string().min(1),
   }),
   z.object({
     action: z.literal("reject"),
@@ -42,6 +44,7 @@ export async function POST(req: Request) {
         extractionId: parsed.data.extractionId,
         finalData: parsed.data.finalData,
         touchedFields: parsed.data.touchedFields,
+        signature: { password: parsed.data.password },
       });
       return NextResponse.json(result);
     }

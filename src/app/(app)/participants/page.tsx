@@ -88,7 +88,8 @@ export default async function ParticipantsPage(props: {
       } else if (action === "consent") {
         await recordConsent(db, actor, pid);
       } else if (action === "enrol") {
-        await enrolParticipant(db, actor, pid, String(formData.get("arm") || "intervention"));
+        // arm comes from the randomization engine (T10.2), never the form
+        await enrolParticipant(db, actor, pid);
       } else if (action === "withdraw") {
         await withdrawParticipant(
           db,
@@ -224,15 +225,8 @@ export default async function ParticipantsPage(props: {
                           <form action={act} className="flex items-center gap-2">
                             <input type="hidden" name="action" value="enrol" />
                             <input type="hidden" name="participantId" value={p.id} />
-                            <select
-                              name="arm"
-                              className="h-8 rounded-xl border border-line bg-surface px-2 outline-none"
-                            >
-                              <option value="intervention">intervention</option>
-                              <option value="control">control</option>
-                            </select>
                             <Button size="sm" type="submit">
-                              Enrol
+                              Enrol &amp; randomize
                             </Button>
                           </form>
                         ) : null}

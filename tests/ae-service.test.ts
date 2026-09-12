@@ -10,6 +10,7 @@ import {
   users,
 } from "@/db/schema";
 import type { Actor } from "@/lib/audit";
+import { hashPassword } from "@/lib/auth-core";
 import { RbacError } from "@/lib/rbac";
 import {
   AeError,
@@ -22,14 +23,18 @@ let db: TestDb;
 let pi: Actor, pv: Actor, monitor: Actor;
 let participantId: string;
 
+// e-signature (D-022): marking an AE reported is signed with the PV's password
+const PW = "Sign@1234";
+
 beforeAll(async () => {
   db = await createTestDb();
+  const hash = await hashPassword(PW);
   const rows = await db
     .insert(users)
     .values([
-      { email: "pi@a.demo", passwordHash: "x", name: "PI", role: "pi" },
-      { email: "pv@a.demo", passwordHash: "x", name: "PV", role: "pv" },
-      { email: "mo@a.demo", passwordHash: "x", name: "MO", role: "monitor" },
+      { email: "pi@a.demo", passwordHash: hash, name: "PI", role: "pi" },
+      { email: "pv@a.demo", passwordHash: hash, name: "PV", role: "pv" },
+      { email: "mo@a.demo", passwordHash: hash, name: "MO", role: "monitor" },
     ])
     .returning();
   pi = { id: rows[0].id, role: "pi" };
@@ -124,7 +129,9 @@ describe("T2.2 — PV review walk", () => {
     });
 
     await advanceAeStatus(db, pv, ae.id, "under_review");
-    const reported = await advanceAeStatus(db, pv, ae.id, "reported", "sent to NPvCC");
+    const reported = await advanceAeStatus(db, pv, ae.id, "reported", "sent to NPvCC", {
+      password: PW,
+    });
     expect(reported.reportedAt).toBeInstanceOf(Date);
     await advanceAeStatus(db, pv, ae.id, "closed");
 

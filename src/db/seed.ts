@@ -14,6 +14,7 @@ import {
   auditEvents,
   crfEntries,
   crfTemplates,
+  documents,
   milestones,
   participants,
   sites,
@@ -167,6 +168,20 @@ export async function seed(db: Db): Promise<SeedSummary> {
       ),
     )
     .returning();
+
+  // consent form v1 per trial — consent binding (T10.4) requires one on file
+  await db.insert(documents).values(
+    trialRows.map((t) => ({
+      trialId: t.id,
+      kind: "consent_form" as const,
+      title: `${t.protocolCode} Informed Consent Form`,
+      version: 1,
+      blobUrl:
+        "data:text/plain;base64,SW5mb3JtZWQgY29uc2VudCBmb3JtICh2MSkgLSBzeW50aGV0aWMgZGVtbyBkb2N1bWVudA==",
+      uploadedBy: byRole.coordinator.id,
+    })),
+  );
+
   const templateFor = (trialId: string, visitName: string) =>
     templateRows.find((tt) => tt.trialId === trialId && tt.visitType === visitName)!;
 

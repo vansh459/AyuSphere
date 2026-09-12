@@ -13,6 +13,7 @@ import {
   trials,
 } from "@/db/schema";
 import { DEFAULT_CRF_FIELDS } from "@/lib/crf";
+import { DEFAULT_ARMS, armsSchema } from "@/lib/rules/randomization";
 import { withAudit, type Actor } from "@/lib/audit";
 import { assertCan } from "@/lib/rbac";
 import {
@@ -46,9 +47,12 @@ export const createTrialInput = z.object({
   visitPlan: z
     .array(visitPlanItem)
     .min(1, "add at least one visit row (name + day offset + window)"),
+  /** randomization arms (T10.2, D-027); defaults to 1:1 Intervention/Control */
+  arms: armsSchema.default(DEFAULT_ARMS),
 });
 
-export type CreateTrialInput = z.infer<typeof createTrialInput>;
+// input type (not infer): `arms` carries a Zod default, so callers may omit it
+export type CreateTrialInput = z.input<typeof createTrialInput>;
 
 export async function createTrial(
   db: Db,

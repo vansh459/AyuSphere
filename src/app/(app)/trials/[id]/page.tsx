@@ -8,6 +8,8 @@ import { can } from "@/lib/rbac";
 import { getDb } from "@/db";
 import { documents, milestones, trials } from "@/db/schema";
 import { transitionTrial } from "@/services/trials";
+import { listAmendments, submitAmendment } from "@/services/amendments";
+import { consentRegister } from "@/services/participants";
 import {
   sitePerformance,
   trialEnrolment,
@@ -58,18 +60,39 @@ export default async function TrialDetailPage(props: {
   const [trial] = await db.select().from(trials).where(eq(trials.id, id)).limit(1);
   if (!trial) notFound();
 
-  const [ms, docs, enrolment, perf, compliance] = await Promise.all([
-    db.select().from(milestones).where(eq(milestones.trialId, id)),
-    db.select().from(documents).where(eq(documents.trialId, id)),
-    trialEnrolment(db, id),
-    sitePerformance(db, id),
-    visitCompliance(db, id),
-  ]);
+  const [ms, docs, enrolment, perf, compliance, trialAmendments, consents] =
+    await Promise.all([
+      db.select().from(milestones).where(eq(milestones.trialId, id)),
+      db.select().from(documents).where(eq(documents.trialId, id)),
+      trialEnrolment(db, id),
+      sitePerformance(db, id),
+      visitCompliance(db, id),
+      listAmendments(db, id),
+      consentRegister(db, id),
+    ]);
+  const consented = consents.filter((c) => c.consentStatus === "given");
+  const reconsentDue = consents.filter((c) => c.reconsentDue);
   const hasProtocolDoc = docs.some((d) => d.kind === "protocol");
   const status = trial.status as TrialStatus;
   const actions = (NEXT_ACTIONS[status] ?? []).filter(() =>
     can(role, "trial.manage"),
   );
+
+  async function submitAmendmentAction(formData: FormData) {
+    "use server";
+    const actor = await requireActor("trial.manage");
+    try {
+      await submitAmendment(getDb(), actor, {
+        trialId: id,
+        summary: String(formData.get("summary") ?? ""),
+      });
+    } catch (e) {
+      redirect(withError(`/trials/${id}`, e));
+    }
+    revalidatePath(`/trials/${id}`);
+    revalidatePath("/ethics");
+    redirect(`/trials/${id}`);
+  }
 
   async function transition(formData: FormData) {
     "use server";
@@ -260,6 +283,126 @@ export default async function TrialDetailPage(props: {
           </Link>
         </Card>
       </div>
+
+      <Card className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <CardTitle className="text-body font-bold">
+            Consent register (T10.4)
+          </CardTitle>
+          <div className="flex items-center gap-2">
+            <Badge tone="success">{consented.length} consented</Badge>
+            {reconsentDue.length > 0 ? (
+              <Badge tone="warning">{reconsentDue.length} re-consent due</Badge>
+            ) : null}
+          </div>
+        </div>
+        <p className="opacity-70">
+          Consent is bound to the consent-form version signed; uploading a new
+          consent-form version flags everyone consented on older versions.
+        </p>
+        {consents.length === 0 ? (
+          <p className="opacity-70">No participants yet.</p>
+        ) : (
+          consents.slice(0, 20).map((c) => (
+            <div
+              key={c.participantId}
+              className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-2"
+            >
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="font-medium">{c.subjectCode}</p>
+                <Badge tone={c.consentStatus === "given" ? "success" : "neutral"}>
+                  consent {c.consentStatus.replaceAll("_", " ")}
+                </Badge>
+                {c.reconsentDue ? (
+                  <Badge tone="warning">re-consent due</Badge>
+                ) : null}
+              </div>
+              <p className="opacity-50">
+                {c.consentFormVersion !== null
+                  ? `signed form v${c.consentFormVersion} of v${c.latestFormVersion ?? "?"}`
+                  : "no form binding (legacy)"}
+                {c.consentDate ? ` · ${c.consentDate.toLocaleDateString()}` : ""}
+              </p>
+            </div>
+          ))
+        )}
+        {consents.length > 20 ? (
+          <p className="opacity-50">
+            … and {consents.length - 20} more — see Participants.
+          </p>
+        ) : null}
+      </Card>
+
+      <Card className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <CardTitle className="text-body font-bold">
+            Protocol amendments
+          </CardTitle>
+          <Badge tone="info">protocol v{trial.protocolVersion}</Badge>
+        </div>
+        <p className="opacity-70">
+          Past draft, protocol changes (visit plan, arms) require an approved
+          amendment from the Ethics Committee — applying one bumps the
+          protocol version (T10.3).
+        </p>
+        {can(role, "trial.manage") && status !== "draft" ? (
+          <form
+            action={submitAmendmentAction}
+            className="flex flex-wrap items-end gap-3"
+          >
+            <div className="flex min-w-64 flex-1 flex-col gap-2">
+              <Label htmlFor="summary">Amendment summary</Label>
+              <Input
+                id="summary"
+                name="summary"
+                required
+                minLength={10}
+                placeholder="e.g. add a day-90 follow-up visit; change arm ratio to 2:1"
+              />
+            </div>
+            <Button type="submit">Submit to Ethics</Button>
+          </form>
+        ) : null}
+        {trialAmendments.length === 0 ? (
+          <p className="opacity-70">No amendments submitted.</p>
+        ) : (
+          trialAmendments.map((a) => (
+            <div
+              key={a.id}
+              className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-3"
+            >
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge
+                    tone={
+                      a.status === "approved"
+                        ? "success"
+                        : a.status === "returned"
+                          ? "danger"
+                          : "warning"
+                    }
+                  >
+                    {a.status}
+                  </Badge>
+                  {a.appliedAt ? <Badge tone="neutral">applied</Badge> : null}
+                  <p className="font-medium">
+                    v{a.versionNumber} · {a.summary}
+                  </p>
+                </div>
+                {a.comment ? (
+                  <p className="mt-1 opacity-70">IEC: {a.comment}</p>
+                ) : null}
+                <p className="mt-1 opacity-50">
+                  submitted {a.createdAt.toLocaleDateString()}
+                  {a.decidedAt
+                    ? ` · decided ${a.decidedAt.toLocaleDateString()}`
+                    : ""}
+                </p>
+              </div>
+            </div>
+          ))
+        )}
+      </Card>
     </div>
   );
 }

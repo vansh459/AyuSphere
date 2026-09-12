@@ -8,6 +8,8 @@ import {
   adverseEvents,
   alerts,
   auditEvents,
+  crfEntries,
+  extractions,
   participants,
   sites,
   trialSites,
@@ -135,6 +137,37 @@ export async function sitePerformanceAggregate(db: Db): Promise<SiteBar[]> {
     .sort((a, b) => b.rate - a.rate);
 }
 
+export type PendingApprovals = {
+  submittedEntries: number;
+  extractionsInReview: number;
+  /** top submitted entries awaiting the PI's signature */
+  queue: { entryId: string; visitId: string; subjectCode: string; visitName: string }[];
+};
+
+/** the PI's signing queue (T10.5): submitted CRFs + extractions in review */
+export async function pendingApprovals(db: Db): Promise<PendingApprovals> {
+  const [counts] = await db
+    .select({
+      submittedEntries: sql<number>`(select count(*)::int from ${crfEntries} where status = 'submitted')`,
+      extractionsInReview: sql<number>`(select count(*)::int from ${extractions} where status = 'review')`,
+    })
+    .from(sql`(select 1) as one`);
+  const queue = await db
+    .select({
+      entryId: crfEntries.id,
+      visitId: visits.id,
+      subjectCode: participants.subjectCode,
+      visitName: visits.name,
+    })
+    .from(crfEntries)
+    .innerJoin(visits, eq(crfEntries.visitId, visits.id))
+    .innerJoin(participants, eq(visits.participantId, participants.id))
+    .where(sql`${crfEntries.status} = 'submitted'`)
+    .orderBy(desc(crfEntries.createdAt))
+    .limit(5);
+  return { ...counts, queue };
+}
+
 export function relativeTime(at: Date, now = new Date()): string {
   const mins = Math.max(1, Math.round((now.getTime() - at.getTime()) / 60_000));
   if (mins < 60) return `${mins} min ago`;
@@ -158,6 +191,10 @@ const ACTIVITY_LABELS: Record<string, string> = {
   "extraction.approve": "Note extraction approved",
   "ae.capture": "Adverse event reported",
   "ae.reported": "Adverse event reported to authority",
+  "ae.report_generated": "Regulatory report generated",
+  "adr.receive": "Spontaneous ADR received (NPvCC)",
+  "adr.assess": "Spontaneous ADR assessed",
+  "adr.forward": "Spontaneous ADR forwarded to authority",
   "visit.complete": "Visit completed",
   "visit.missed": "Visit missed",
   "document.upload": "Document uploaded",
@@ -170,6 +207,16 @@ const ACTIVITY_LABELS: Record<string, string> = {
   "user.activate": "User account reactivated",
   "user.deactivate": "User account deactivated",
   "alert.acknowledge": "Alert acknowledged",
+  "amendment.submit": "Protocol amendment submitted",
+  "amendment.approve": "Protocol amendment approved (IEC)",
+  "amendment.return": "Protocol amendment returned (IEC)",
+  "trial.protocol_update": "Protocol updated (versioned)",
+  "data_query.raise": "Data query raised",
+  "data_query.answer": "Data query answered",
+  "data_query.close": "Data query closed",
+  "monitoring.schedule": "Monitoring visit scheduled",
+  "monitoring.complete": "Monitoring visit completed",
+  "settings.alert_update": "Alert & deadline rules updated",
   "extraction.quality_fail": "Note image rejected (quality)",
   "extraction.invalid_output": "Note extraction failed validation",
   "extraction.reject": "Note extraction rejected",
@@ -178,7 +225,10 @@ const ACTIVITY_LABELS: Record<string, string> = {
   "export.fhir": "FHIR bundle exported",
   "export.dm": "SDTM DM exported",
   "export.ae": "SDTM AE exported",
+  "export.adsl": "ADaM ADSL exported",
   "export.define": "Define-XML exported",
+  "fhir.read": "FHIR resource served via API",
+  "fhir.import": "FHIR bundle imported as draft CRF",
 };
 
 /** friendly label with a prettified fallback — raw dotted keys never render */

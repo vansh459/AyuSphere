@@ -97,6 +97,8 @@ erDiagram
 | `documents` | id, trial_id, kind (protocol/ethics_approval/consent_form/monitoring_report/regulatory), version, blob_url, uploaded_by | Version history = one row per version |
 | `milestones` | id, trial_id, kind (**iec_submission, iec_approval, ctri_registration**, first_enrolment, last_visit, closeout), due_date, completed_at? | Drives CTRI/ethics due alerts |
 | `alerts` | id, trial_id?, site_id?, rule_key, severity, message, entity_ref, status (open/acknowledged/resolved), created_at | Written by rules engine, surfaced role-filtered |
+| `signatures` | id, actor_id, actor_role, entity_type, entity_id, action (approve/correct/report), **meaning**, **payload_hash** (SHA-256), signed_at | E-signature per record-freezing action (D-022); inserted in the same transaction as the mutation it signs |
+| `monitoring_visits` | id, trial_site_id, monitor_id, scheduled_date, completed_at?, summary, findings (JSONB), report_document_id? | Monitor's site visits (T7.3); completing advances `trial_sites.monitoring_visit_due` by the configured cadence |
 | `audit_events` | id, actor_id, actor_role, action, entity_type, entity_id, before (JSONB), after (JSONB), at, request_id | **INSERT-only** (§5) |
 
 ## 4. Trial lifecycle state machine
@@ -163,7 +165,7 @@ Two evaluation triggers, one rule registry (`src/lib/rules/alerts.ts`):
 1. **On write** — any mutation re-evaluates rules touching that entity (e.g. enrolling a participant updates site recruitment velocity; approving a CRF may raise a deviation).
 2. **On schedule** — Vercel Cron (daily on Hobby; 10 min on Pro) sweeps time-based rules: overdue visits (past `window_end`), approaching/breached AE deadlines, upcoming milestone due dates (CTRI/ethics), stale monitoring visits.
 
-Built-in rule set (each maps to a PS-named alert): `enrolment_lag`, `visit_overdue`, `ae_deadline_approaching`, `ae_deadline_breached`, `milestone_due` (ethics/CTRI), `monitoring_overdue`, `data_quality` (missing/inconsistent/duplicate/impossible values), `protocol_deviation` (missed/out-of-window visit, missing required assessment). Alerts are idempotent (rule_key + entity_ref unique while open) and role-routed (PV sees safety, coordinators see visits, admin sees everything).
+Built-in rule set (each maps to a PS-named alert): `enrolment_lag`, `visit_overdue`, `ae_deadline_approaching`, `ae_deadline_breached`, `milestone_due` (ethics/CTRI), `monitoring_overdue`, `data_quality` (missing/inconsistent/duplicate/impossible values), `protocol_deviation` (missed/out-of-window visit, missing required assessment). Alerts are idempotent (rule_key + entity_ref unique while open) and role-routed (PV sees safety, coordinators see visits, admin sees everything). Rule thresholds (lag %, AE warning window, milestone lookahead, monitoring cadence) and the AE/SAE deadline-rule table are **admin-configurable** via the `alert_config` document in `app_settings` (D-023) with the built-in values as defaults — the PS's "configurable KPIs and alerting".
 
 ## 9. AI Copilot (grounded Q&A)
 
@@ -184,6 +186,7 @@ Single source: `src/lib/rbac.ts` — a permission matrix consumed by (a) middlew
 | Capture AE | ✅ | ✅ | — | — | ✅ | — | — |
 | Review/report AE·SAE | — | — | — | — | ✅ | — | — |
 | Monitoring visit logs | — | — | ✅ | — | — | — | — |
+| Raise/close data queries (T10.1) | — | — | ✅ | — | — | ✅ | — |
 | Exports (FHIR/SDTM) | ✅ | — | — | — | ✅ | ✅ | — |
 | User management / settings | — | — | — | — | — | ✅ | — |
 | Audit browser | — | — | — | — | — | ✅ | ✅ (read-only) |
@@ -196,6 +199,8 @@ Scoping rules: PI/coordinator see their trials; monitors their assigned sites; r
 - Pure mapper functions in `src/services/export/`: Drizzle rows → FHIR R4 JSON (`ResearchStudy`, `ResearchSubject`, de-identified `Patient`, `AdverseEvent`) bundled per trial; and → SDTM `DM` / `AE` domain CSVs with a Define-XML stub describing them.
 - Because CRF fields carry `cdash_var` names from creation, SDTM export is projection, not transformation.
 - Exports are audited (who exported what, when) and downloadable from the Exports page — the artifact judges can open.
+- **Live FHIR API + inbound path (T9.3, D-026):** authenticated, audited read endpoints `GET /api/fhir/Bundle/[trialId]` and `GET /api/fhir/ResearchStudy/[id]` serve the same mappers as `application/fhir+json` (regulator gets read via `audit.view`); `POST /api/fhir/import` accepts an Observation bundle from an EDC/HIS and creates a **draft** CRF entry mapped through the visit's template — imported data flows through the normal validate → submit → signed-approve path, never auto-committing.
+- **ABDM posture:** the FHIR R4 endpoints are the ABDM-compatible building block; ABHA-linked identifiers deliberately stay OUTSIDE the de-identified research schema (D-016) — linkage would live in a separate consented care-context layer in production. Stated as roadmap, not mocked.
 
 ## 12. Security posture
 
@@ -204,4 +209,4 @@ Scoping rules: PI/coordinator see their trials; monitors their assigned sites; r
 - **Input:** every boundary Zod-parsed (actions, route handlers, AI outputs); Drizzle parameterizes all SQL.
 - **Secrets:** env-only, never client-bundled; `ANTHROPIC_API_KEY` used exclusively in route handlers.
 - **Privacy by schema:** the participants table cannot store direct identifiers (D-016); DPDP posture = minimisation + consent fields + synthetic data in all environments.
-- **Honest caveats for the demo:** Neon/Vercel regions are the dev/demo host; the production narrative names India data-resident, ISO 27001 / CERT-In infrastructure (D-002, D-014). MVP e-signature = authenticated approval + payload hash + timestamp, stated as such.
+- **Honest caveats for the demo:** Neon/Vercel regions are the dev/demo host; the production narrative names India data-resident, ISO 27001 / CERT-In infrastructure (D-002, D-014). MVP e-signature (implemented, D-022/T7.1): password re-authentication + signature meaning + SHA-256 payload hash + timestamp in the `signatures` table, committed atomically with the signed mutation — stated plainly as an MVP e-sign (no PKI).

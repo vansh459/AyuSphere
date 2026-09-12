@@ -45,7 +45,7 @@ beforeAll(async () => {
     })
     .returning();
   realAlertId = a.id;
-}, 60_000);
+}, 180_000);
 
 describe("T4.3 — the regulator can mutate NOTHING (real entity ids)", () => {
   const uuid = "00000000-0000-0000-0000-000000000001";
@@ -78,7 +78,8 @@ describe("T4.3 — the regulator can mutate NOTHING (real entity ids)", () => {
       ["completeVisit", () => completeVisit(db, regulator, realVisitId)],
       ["createDraftEntry", () =>
         createDraftEntry(db, regulator, realVisitId, {})],
-      ["approveEntry", () => approveEntry(db, regulator, uuid)],
+      ["approveEntry", () =>
+        approveEntry(db, regulator, uuid, { password: "x" })],
       ["captureAdverseEvent", () =>
         captureAdverseEvent(db, regulator, {
           participantId: uuid,
@@ -95,6 +96,7 @@ describe("T4.3 — the regulator can mutate NOTHING (real entity ids)", () => {
           extractionId: uuid,
           finalData: {},
           touchedFields: [],
+          signature: { password: "x" },
         })],
       ["copilot", () =>
         answerQuestion(db, regulator, "anything", {

@@ -16,6 +16,11 @@ import { withAudit, type Actor } from "@/lib/audit";
 import { assertCan } from "@/lib/rbac";
 import { parseTemplateFields, validateCrfData } from "@/lib/crf";
 import {
+  recordSignature,
+  verifySigner,
+  type SignatureRequest,
+} from "@/services/signatures";
+import {
   extractionOutputSchema,
   imageQualitySchema,
   type VisionClient,
@@ -238,6 +243,7 @@ export async function approveExtraction(
     extractionId: string;
     finalData: Record<string, unknown>;
     touchedFields: string[];
+    signature: SignatureRequest;
   },
 ) {
   assertCan(actor.role, "crf.approve");
@@ -269,6 +275,9 @@ export async function approveExtraction(
       `final data invalid: ${check.issues.map((i) => `${i.field}: ${i.message}`).join("; ")}`,
     );
   }
+  // e-signature (D-022): re-auth BEFORE the transaction — nothing commits
+  // on a refused signature
+  await verifySigner(db, actor, input.signature);
 
   return withAudit(db, actor, "extraction.approve", async (tx) => {
     const [entry] = await tx
@@ -289,6 +298,16 @@ export async function approveExtraction(
       .update(extractions)
       .set({ status: "approved", reviewedBy: actor.id, reviewedAt: new Date() })
       .where(eq(extractions.id, extraction.id));
+    const sig = await recordSignature(tx, actor, {
+      entityType: "crf_entry",
+      entityId: entry.id,
+      action: "approve",
+      payload: {
+        entityId: entry.id,
+        data: check.data,
+        extractionId: extraction.id,
+      },
+    });
     return {
       result: { entry, extractionId: extraction.id },
       entityType: "crf_entry",
@@ -298,6 +317,8 @@ export async function approveExtraction(
         extractionId: extraction.id,
         modelId: extraction.modelId,
         promptVersion: extraction.promptVersion,
+        signatureId: sig.id,
+        payloadHash: sig.payloadHash,
       },
     };
   });
