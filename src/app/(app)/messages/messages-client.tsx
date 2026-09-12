@@ -255,7 +255,7 @@ export function MessagesClient({
                   <Badge tone="neutral">{ROLE_LABEL[c.role] ?? c.role}</Badge>
                 </span>
                 {c.lastMessageAt ? (
-                  <span className="block truncate opacity-50">
+                  <span suppressHydrationWarning className="block truncate opacity-50">
                     {timeLabel(c.lastMessageAt)}
                   </span>
                 ) : null}
@@ -328,6 +328,7 @@ export function MessagesClient({
                           ) : null}
                           <Attachment m={m} />
                           <p
+                            suppressHydrationWarning
                             className={cn(
                               "mt-1 text-right",
                               own ? "text-white/60" : "opacity-50",
