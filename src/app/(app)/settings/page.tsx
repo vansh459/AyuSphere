@@ -6,8 +6,11 @@ import { users } from "@/db/schema";
 import { createUser, setUserActive } from "@/services/users";
 import {
   getAiSettingsView,
+  getGuideSettingsView,
   saveAiSettings,
+  saveGuideSettings,
   type AiSettingsView,
+  type GuideSettingsView,
 } from "@/services/settings";
 import { defaultModelFor } from "@/lib/ai/provider";
 import { ROLES } from "@/lib/rbac";
@@ -29,11 +32,13 @@ export default async function SettingsPage(props: {
 
   let rows: (typeof users.$inferSelect)[] = [];
   let ai: AiSettingsView = { provider: null, model: null, keySet: false, source: "none" };
+  let guide: GuideSettingsView = { model: null, keySet: false, source: "none" };
   let dbError = false;
   try {
     const db = getDb();
     rows = await db.select().from(users).orderBy(users.email);
     ai = await getAiSettingsView(db);
+    guide = await getGuideSettingsView(db);
   } catch {
     dbError = true;
   }
@@ -63,6 +68,21 @@ export default async function SettingsPage(props: {
         name: String(formData.get("name") ?? ""),
         role: String(formData.get("role")) as (typeof ROLES)[number],
         password: String(formData.get("password") ?? ""),
+      });
+    } catch (e) {
+      redirect(withError("/settings", e));
+    }
+    revalidatePath("/settings");
+    redirect("/settings");
+  }
+
+  async function saveGuide(formData: FormData) {
+    "use server";
+    const actor = await requireActor("users.manage");
+    try {
+      await saveGuideSettings(getDb(), actor, {
+        model: String(formData.get("guideModel") ?? ""),
+        apiKey: String(formData.get("guideApiKey") ?? ""),
       });
     } catch (e) {
       redirect(withError("/settings", e));
@@ -160,6 +180,54 @@ export default async function SettingsPage(props: {
               Model examples — Gemini: gemini-2.5-flash, gemini-2.5-pro ·
               Claude: claude-sonnet-5, claude-haiku-4-5-20251001
             </p>
+          </Card>
+
+          <Card className="flex flex-col gap-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <CardTitle className="text-body font-bold">
+                Guide Assistant (Groq)
+              </CardTitle>
+              {guide.keySet ? (
+                <Badge tone="success">
+                  {guide.model} ·{" "}
+                  {guide.source === "env" ? "from environment" : "configured in UI"}
+                </Badge>
+              ) : (
+                <Badge tone="warning">not configured</Badge>
+              )}
+            </div>
+            <p className="opacity-70">
+              Powers Sphera, the floating role-aware guide on every screen. The
+              key is stored server-side and never displayed again. Model list:
+              console.groq.com/docs/models.
+            </p>
+            <form action={saveGuide} className="grid grid-cols-1 items-end gap-3 md:grid-cols-3">
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="guideModel">Model</Label>
+                <Input
+                  id="guideModel"
+                  name="guideModel"
+                  defaultValue={guide.model ?? "llama-3.3-70b-versatile"}
+                  placeholder="llama-3.3-70b-versatile"
+                  required
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="guideApiKey">Groq API key</Label>
+                <Input
+                  id="guideApiKey"
+                  name="guideApiKey"
+                  type="password"
+                  autoComplete="off"
+                  placeholder={
+                    guide.source === "settings"
+                      ? "leave blank to keep current key"
+                      : "paste your Groq API key"
+                  }
+                />
+              </div>
+              <Button type="submit">Save guide settings</Button>
+            </form>
           </Card>
 
           <Card className="flex flex-col gap-4">
