@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { desc, eq } from "drizzle-orm";
 import { requireActor, withError } from "@/lib/actor";
 import { auth } from "@/lib/auth";
@@ -80,6 +81,8 @@ export default async function VisitDetailPage(props: {
     } catch (e) {
       redirect(withError(`/visits/${id}`, e));
     }
+    revalidatePath(`/visits/${id}`);
+    revalidatePath("/visits");
     redirect(`/visits/${id}`);
   }
 
@@ -91,6 +94,8 @@ export default async function VisitDetailPage(props: {
     } catch (e) {
       redirect(withError(`/visits/${id}`, e));
     }
+    revalidatePath(`/visits/${id}`);
+    revalidatePath("/visits");
     redirect(`/visits/${id}`);
   }
 
@@ -102,6 +107,8 @@ export default async function VisitDetailPage(props: {
     } catch (e) {
       redirect(withError(`/visits/${id}`, e));
     }
+    revalidatePath(`/visits/${id}`);
+    revalidatePath("/visits");
     redirect(`/visits/${id}`);
   }
 

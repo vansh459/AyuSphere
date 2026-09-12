@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { eq, sql } from "drizzle-orm";
 import { requireActor, withError } from "@/lib/actor";
 import { getDb } from "@/db";
@@ -64,6 +65,7 @@ export default async function SitesPage(props: {
     } catch (e) {
       redirect(withError("/sites", e));
     }
+    revalidatePath("/sites");
     redirect("/sites");
   }
 
@@ -79,6 +81,7 @@ export default async function SitesPage(props: {
     } catch (e) {
       redirect(withError("/sites", e));
     }
+    revalidatePath("/sites");
     redirect("/sites");
   }
 
@@ -90,6 +93,7 @@ export default async function SitesPage(props: {
     } catch (e) {
       redirect(withError("/sites", e));
     }
+    revalidatePath("/sites");
     redirect("/sites");
   }
 

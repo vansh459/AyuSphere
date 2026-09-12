@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { desc, eq } from "drizzle-orm";
 import { requireActor, withError } from "@/lib/actor";
 import { getDb } from "@/db";
@@ -29,6 +30,7 @@ export default async function DocumentsPage(props: {
 }) {
   await requireActor("document.upload");
   const sp = await props.searchParams;
+  const preselectTrial = typeof sp.trial === "string" ? sp.trial : undefined;
 
   let trialRows: (typeof trials.$inferSelect)[] = [];
   let docs: { d: typeof documents.$inferSelect; protocolCode: string }[] = [];
@@ -79,6 +81,8 @@ export default async function DocumentsPage(props: {
     } catch (e) {
       redirect(withError("/documents", e));
     }
+    revalidatePath("/documents");
+    revalidatePath("/trials");
     redirect("/documents");
   }
 
@@ -102,6 +106,7 @@ export default async function DocumentsPage(props: {
                 <select
                   id="trialId"
                   name="trialId"
+                  defaultValue={preselectTrial}
                   className="h-10 rounded-[0.875rem] border border-line bg-surface px-3 outline-none focus:border-primary"
                   required
                 >

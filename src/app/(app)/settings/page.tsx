@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { requireActor, withError } from "@/lib/actor";
 import { getDb } from "@/db";
 import { users } from "@/db/schema";
@@ -49,6 +50,7 @@ export default async function SettingsPage(props: {
     } catch (e) {
       redirect(withError("/settings", e));
     }
+    revalidatePath("/settings");
     redirect("/settings");
   }
 
@@ -65,6 +67,7 @@ export default async function SettingsPage(props: {
     } catch (e) {
       redirect(withError("/settings", e));
     }
+    revalidatePath("/settings");
     redirect("/settings");
   }
 
@@ -81,6 +84,7 @@ export default async function SettingsPage(props: {
     } catch (e) {
       redirect(withError("/settings", e));
     }
+    revalidatePath("/settings");
     redirect("/settings");
   }
 

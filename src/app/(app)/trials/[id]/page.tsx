@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { requireActor, withError } from "@/lib/actor";
 import { auth } from "@/lib/auth";
@@ -79,6 +80,8 @@ export default async function TrialDetailPage(props: {
     } catch (e) {
       redirect(withError(`/trials/${id}`, e));
     }
+    revalidatePath("/trials");
+    revalidatePath(`/trials/${id}`);
     redirect(`/trials/${id}`);
   }
 
@@ -250,7 +253,7 @@ export default async function TrialDetailPage(props: {
               </div>
             ))
           )}
-          <Link href="/documents" className="font-medium text-primary">
+          <Link href={`/documents?trial=${id}`} className="font-medium text-primary">
             Manage documents →
           </Link>
         </Card>

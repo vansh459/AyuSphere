@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { requireActor, withError } from "@/lib/actor";
 import { getDb } from "@/db";
@@ -99,6 +100,7 @@ export default async function ParticipantsPage(props: {
     } catch (e) {
       redirect(withError("/participants", e));
     }
+    revalidatePath("/participants");
     redirect("/participants");
   }
 

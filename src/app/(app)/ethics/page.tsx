@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { eq, inArray } from "drizzle-orm";
 import { requireActor, withError } from "@/lib/actor";
 import { getDb } from "@/db";
@@ -59,6 +60,8 @@ export default async function EthicsPage(props: {
     } catch (e) {
       redirect(withError("/ethics", e));
     }
+    revalidatePath("/ethics");
+    revalidatePath("/trials");
     redirect("/ethics");
   }
 

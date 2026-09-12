@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { requireActor, withError } from "@/lib/actor";
 import { getDb } from "@/db";
 import { createTrial } from "@/services/trials";
@@ -42,6 +43,7 @@ export default async function NewTrialPage(props: {
     } catch (e) {
       redirect(withError("/trials/new", e));
     }
+    revalidatePath("/trials");
     redirect(`/trials/${trialId}`);
   }
 
