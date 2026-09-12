@@ -12,7 +12,7 @@ import {
 } from "@/lib/guide/knowledge";
 
 export const GUIDE_NAME = "Sphera";
-export const GROQ_DEFAULT_MODEL = "llama-3.3-70b-versatile";
+export const GROQ_DEFAULT_MODEL = "openai/gpt-oss-120b";
 export const MAX_HISTORY_TURNS = 8;
 
 /** ONLY this role's slice plus global — never the whole map */
