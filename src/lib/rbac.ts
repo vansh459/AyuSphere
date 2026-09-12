@@ -71,17 +71,8 @@ const MATRIX: Record<Role, readonly Capability[]> = {
     "copilot.use",
     "export.run",
   ],
-  admin: [
-    "dashboard.view",
-    "trial.manage",
-    "site.manage",
-    "alert.acknowledge",
-    "copilot.use",
-    "export.run",
-    "document.upload",
-    "users.manage",
-    "audit.view",
-  ],
+  // admin: full access to every feature (user request, 2026-09-12)
+  admin: [...CAPABILITIES],
   // read-only regulator: NOTHING that mutates
   regulator: ["dashboard.view", "audit.view"],
 };

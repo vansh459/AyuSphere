@@ -82,13 +82,12 @@ describe("T3.2 — RBAC scope + hallucination control", () => {
     ).rejects.toThrow(RbacError);
   });
 
-  it("admin asking a safety question gets a DECLINE (no ae capability) and the model is NEVER called", async () => {
+  it("admin (full access) gets grounded safety answers", async () => {
     const { client, complete } = mockLlm();
     const res = await answerQuestion(db, admin, "list open SAEs", client);
-    expect(res.grounded).toBe(false);
-    expect(res.citations).toHaveLength(0);
-    expect(res.answer).toContain("No supporting records");
-    expect(complete).not.toHaveBeenCalled();
+    expect(res.grounded).toBe(true);
+    expect(res.citations.length).toBeGreaterThan(0);
+    expect(complete).toHaveBeenCalled();
   });
 
   it("empty retrieval → decline without model call (recruitment, nothing lagging)", async () => {

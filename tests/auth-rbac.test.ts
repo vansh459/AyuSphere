@@ -83,14 +83,14 @@ describe("T0.4 — RBAC matrix (architecture.md §10)", () => {
 
   it("only ethics can pass the ethics gate", () => {
     for (const role of ROLES) {
-      expect(can(role, "trial.ethicsReview")).toBe(role === "ethics");
+      expect(can(role, "trial.ethicsReview")).toBe(role === "ethics" || role === "admin");
     }
   });
 
   it("only PI approves CRFs/extractions; only PV reviews AEs; only admin manages users", () => {
     for (const role of ROLES) {
-      expect(can(role, "crf.approve")).toBe(role === "pi");
-      expect(can(role, "ae.review")).toBe(role === "pv");
+      expect(can(role, "crf.approve")).toBe(role === "pi" || role === "admin");
+      expect(can(role, "ae.review")).toBe(role === "pv" || role === "admin");
       expect(can(role, "users.manage")).toBe(role === "admin");
     }
   });
