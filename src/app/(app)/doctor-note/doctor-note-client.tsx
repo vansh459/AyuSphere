@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input, Label } from "@/components/ui/input";
+import { prepareImageForUpload } from "@/lib/image";
 
 export type VisitOption = { id: string; label: string };
 
@@ -80,10 +81,26 @@ export function DoctorNoteClient({
     try {
       const form = new FormData();
       form.set("visitId", visitId);
-      form.set("image", file);
+      // phone photos are often 4–8MB; Vercel rejects bodies > 4.5MB
+      form.set("image", await prepareImageForUpload(file));
       const res = await fetch("/api/ai/extract", { method: "POST", body: form });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "extraction failed");
+      // platform-level failures (e.g. 413) return plain text, not JSON
+      const raw = await res.text();
+      let json: { error?: string; extraction?: Extraction } = {};
+      try {
+        json = JSON.parse(raw);
+      } catch {
+        /* non-JSON body — handled below via status */
+      }
+      if (!res.ok) {
+        throw new Error(
+          json.error ??
+            (res.status === 413
+              ? "The photo is too large to upload — please retake it at a lower resolution."
+              : `extraction failed (HTTP ${res.status})`),
+        );
+      }
+      if (!json.extraction) throw new Error("extraction failed");
       const ex: Extraction = json.extraction;
       setExtraction(ex);
       const initial: Record<string, string> = {};

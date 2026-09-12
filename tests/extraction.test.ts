@@ -159,6 +159,37 @@ describe("T2.4 — quality gate", () => {
     ).rejects.toThrow(/only 'review'/);
   });
 
+  it("tolerates unknown quality-issue labels and out-of-range scores", async () => {
+    // models occasionally invent labels outside the prompted enum or drift
+    // the score slightly past 1 — neither should abort the pipeline
+    const row = await startExtraction(
+      db,
+      pi,
+      { visitId: visit2, blobUrl: "blob://tolerant" },
+      mockClient({
+        quality: { score: 1.2, issues: ["handwriting", "blur", 42] },
+      }),
+    );
+    expect(row.status).toBe("review"); // clamped score 1 passes the gate
+    const quality = row.imageQuality as { score: number; issues: string[] };
+    expect(quality.score).toBe(1);
+    expect(quality.issues).toEqual(["blur"]); // unknown labels dropped
+    // clean up so later tests see exactly one 'review' row
+    await rejectExtraction(db, pi, row.id, "test fixture cleanup");
+  });
+
+  it("tolerates a missing issues array on a low-quality verdict", async () => {
+    const row = await startExtraction(
+      db,
+      pi,
+      { visitId: visit2, blobUrl: "blob://no-issues" },
+      mockClient({ quality: { score: 0.2 } }),
+    );
+    expect(row.status).toBe("rejected");
+    const flags = row.validationFlags as { message: string }[];
+    expect(flags[0].message).toMatch(/low quality.*recapture/);
+  });
+
   it("rejects malformed model output terminally", async () => {
     const row = await startExtraction(
       db,

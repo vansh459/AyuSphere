@@ -9,6 +9,7 @@ import {
   PROMPT_VERSION,
   extractPrompt,
   fetchImageAsBase64,
+  parseModelJson,
   qualityPrompt,
 } from "@/lib/ai/prompts";
 
@@ -41,7 +42,7 @@ export function createClaudeVisionClient(cfg: {
       ],
     });
     const text = msg.content.find((b) => b.type === "text")?.text ?? "{}";
-    return JSON.parse(text);
+    return parseModelJson(text);
   }
 
   return {

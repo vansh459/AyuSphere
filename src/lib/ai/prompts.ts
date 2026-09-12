@@ -26,6 +26,42 @@ Respond with ONLY JSON, one entry per field you can read:
 Omit fields you cannot read. Never guess values.`;
 }
 
+/**
+ * Parse a model's JSON reply robustly. Models (Gemini especially) sometimes
+ * wrap JSON in ```json fences or prepend prose even when asked for JSON only.
+ * Zod still gates the parsed value downstream (D-012) — this only rescues
+ * the serialization, never the shape.
+ */
+export function parseModelJson(text: string): unknown {
+  const raw = text.trim();
+  try {
+    return JSON.parse(raw);
+  } catch {
+    // 1) markdown-fenced block
+    const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    if (fenced) {
+      try {
+        return JSON.parse(fenced[1].trim());
+      } catch {
+        // fall through to brace extraction
+      }
+    }
+    // 2) first {...} block in surrounding prose
+    const start = raw.indexOf("{");
+    const end = raw.lastIndexOf("}");
+    if (start !== -1 && end > start) {
+      try {
+        return JSON.parse(raw.slice(start, end + 1));
+      } catch {
+        // fall through to the readable error
+      }
+    }
+    throw new Error(
+      `model returned non-JSON output: "${raw.slice(0, 120)}${raw.length > 120 ? "…" : ""}"`,
+    );
+  }
+}
+
 export async function fetchImageAsBase64(
   url: string,
 ): Promise<{ data: string; mediaType: string }> {

@@ -17,7 +17,10 @@ import { startExtraction } from "@/services/extractions";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+// Vercel rejects request bodies over 4.5MB before the function runs, so a
+// higher cap here would be a false promise; the client downscales photos
+// to ~3MB (src/lib/image.ts) before uploading.
+const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -43,7 +46,10 @@ export async function POST(req: Request) {
     );
   }
   if (image.size > MAX_IMAGE_BYTES) {
-    return NextResponse.json({ error: "image too large" }, { status: 413 });
+    return NextResponse.json(
+      { error: "image too large (max 4MB) — please retake at a lower resolution" },
+      { status: 413 },
+    );
   }
 
   // Vercel Blob when configured; data-URL fallback keeps local dev working

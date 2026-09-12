@@ -161,4 +161,54 @@ describe("Gemini client (mocked fetch)", () => {
       "API key not valid",
     );
   });
+
+  it("parses JSON wrapped in markdown fences (Gemini habit)", async () => {
+    stubFetch({
+      candidates: [
+        {
+          content: {
+            parts: [
+              {
+                text: '```json\n{"fields":{"sbp":{"value":128,"confidence":0.9}}}\n```',
+              },
+            ],
+          },
+        },
+      ],
+    });
+    const out = (await createGeminiVisionClient(cfg).extract(
+      "data:image/jpeg;base64,AAAA",
+      [{ name: "sbp", label: "Systolic BP", type: "number", required: true, cdashVar: "VS" }],
+    )) as { fields: Record<string, { value: number }> };
+    expect(out.fields.sbp.value).toBe(128);
+  });
+
+  it("parses JSON surrounded by prose", async () => {
+    stubFetch({
+      candidates: [
+        {
+          content: {
+            parts: [
+              { text: 'Here is the assessment: {"score": 0.8, "issues": []} Hope this helps!' },
+            ],
+          },
+        },
+      ],
+    });
+    const out = (await createGeminiVisionClient(cfg).assessQuality(
+      "data:image/jpeg;base64,AAAA",
+    )) as { score: number };
+    expect(out.score).toBe(0.8);
+  });
+
+  it("throws a readable error on non-JSON model output", async () => {
+    stubFetch({
+      candidates: [
+        { content: { parts: [{ text: "I cannot read this image, sorry." }] } },
+      ],
+    });
+    await expect(
+      createGeminiVisionClient(cfg).assessQuality("data:image/jpeg;base64,AAAA"),
+    ).rejects.toThrow(/non-JSON output/);
+  });
 });

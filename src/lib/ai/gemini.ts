@@ -10,6 +10,7 @@ import {
   PROMPT_VERSION,
   extractPrompt,
   fetchImageAsBase64,
+  parseModelJson,
   qualityPrompt,
 } from "@/lib/ai/prompts";
 
@@ -72,7 +73,7 @@ export function createGeminiVisionClient(cfg: {
         ],
         true,
       );
-      return JSON.parse(text);
+      return parseModelJson(text);
     },
 
     async extract(imageUrl: string, fields: CrfField[]) {
@@ -85,7 +86,7 @@ export function createGeminiVisionClient(cfg: {
         ],
         true,
       );
-      return JSON.parse(text);
+      return parseModelJson(text);
     },
   };
 }

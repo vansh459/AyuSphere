@@ -54,11 +54,27 @@ export function AssistantPanel({
     try {
       const form = new FormData();
       form.set("visitId", visitId);
-      form.set("image", file);
+      // phone photos are often 4–8MB; Vercel rejects bodies > 4.5MB
+      const { prepareImageForUpload } = await import("@/lib/image");
+      form.set("image", await prepareImageForUpload(file));
       const res = await fetch("/api/ai/extract", { method: "POST", body: form });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "extraction failed");
-      setExtraction(json.extraction);
+      // platform-level failures (e.g. 413) return plain text, not JSON
+      const raw = await res.text();
+      let json: { error?: string; extraction?: unknown } = {};
+      try {
+        json = JSON.parse(raw);
+      } catch {
+        /* non-JSON body — handled below via status */
+      }
+      if (!res.ok) {
+        throw new Error(
+          json.error ??
+            (res.status === 413
+              ? "The photo is too large to upload — please retake it at a lower resolution."
+              : `extraction failed (HTTP ${res.status})`),
+        );
+      }
+      setExtraction(json.extraction as Parameters<typeof setExtraction>[0]);
     } catch (e) {
       setError(e instanceof Error ? e.message : "extraction failed");
     } finally {

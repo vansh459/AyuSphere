@@ -7,12 +7,34 @@
 import { z } from "zod";
 import type { CrfField } from "@/lib/crf";
 
+export const qualityIssueSchema = z.enum([
+  "blur",
+  "glare",
+  "skew",
+  "cropped",
+  "low_light",
+  "unreadable",
+]);
+
+/**
+ * Tolerant on purpose: models occasionally invent issue labels outside the
+ * prompted enum or return a score slightly out of range — neither should
+ * fail an otherwise-usable quality assessment. Unknown issue strings are
+ * dropped, the score is clamped to [0, 1]. (mappedFields validation stays
+ * strict — see extractionOutputSchema.)
+ */
 export const imageQualitySchema = z.object({
   /** 0 (unreadable) … 1 (perfect) */
-  score: z.number().min(0).max(1),
-  issues: z.array(
-    z.enum(["blur", "glare", "skew", "cropped", "low_light", "unreadable"]),
-  ),
+  score: z.number().transform((s) => Math.min(1, Math.max(0, s))),
+  issues: z
+    .array(z.unknown())
+    .default([])
+    .transform((arr) =>
+      arr.filter(
+        (i): i is z.infer<typeof qualityIssueSchema> =>
+          qualityIssueSchema.safeParse(i).success,
+      ),
+    ),
 });
 
 export type ImageQuality = z.infer<typeof imageQualitySchema>;
