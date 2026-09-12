@@ -76,6 +76,7 @@ Legend: ☐ pending · ◐ in progress · ✅ done (gate passed)
 | # | Task | Test gate | Status |
 |---|---|---|---|
 | T6.1 | Scrape real Ayurveda trial metadata from CTRI (crawl4ai, pip-only, polite sequential crawl of public trial views; CAPTCHA-gated search untouched) + `seedReal` integration: idempotent trial insert, CRF templates per visit-plan entry, sites from scraped states, milestones, synthetic participants (faker, deterministic) for first ~6 trials + `pnpm db:seed:real` CLI with Neon DNS workaround | `tests/seed-real.test.ts`: >0 trials, CTRI number format, template coverage (no template-less visits), synthetic-participant bounds (5-15, ≤6 trials), determinism, idempotency; `pnpm typecheck` + full suite + `pnpm build` green | ✅ |
+| T6.2 | Sphera role-aware floating guide (Groq): knowledge base, prompt builder, SSE streaming route, leaf-orb widget, Settings card | 12 guide tests (slicing, drift-guard, SSE, settings audit hygiene) + full suite 202 green + build | ✅ |
 
 ---
 

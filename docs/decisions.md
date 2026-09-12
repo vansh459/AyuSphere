@@ -223,6 +223,15 @@ Related docs: [development-plan.md](development-plan.md) · [architecture.md](ar
 - **Rationale:** The PS tracks "enrolment and randomization against target"; a real allocator with block balance is small, pure, and unit-testable in the repo's style, and turns a compliance gap into a demonstrable calculation.
 - **Consequences:** `enrolParticipant`'s signature changes (breaking change confined to one service + its callers/tests); allocation details land in the audit snapshot. Blinding/concealment stated plainly as out of MVP scope.
 
+## D-028 — Sphera: Groq-powered role-aware floating guide
+
+- **Date:** 2026-09-13
+- **Note:** merged from a parallel branch as D-022; renumbered D-028 here because D-022–D-027 were already taken by the gap-fill ADRs above.
+- **Decision:** In-app onboarding guide "Sphera" — a floating leaf-orb on every authed screen backed by Groq (`llama-3.3-70b-versatile` default) via plain fetch/SSE (no groq-sdk). Persona and knowledge are separate blocks: `src/lib/guide/knowledge.ts` is the single source of truth per role; the server injects ONLY the session role's slice, so the guide cannot describe another role's screens. Groq key/model stored in `app_settings` (`guide_ai`) via Settings → Guide Assistant, env fallback `GROQ_API_KEY`.
+- **Alternatives:** groq-sdk dependency; baking feature prose into the persona prompt; reusing the clinical AI provider (Gemini/Claude) for the guide; Lottie/Rive character.
+- **Rationale:** User-approved spec: Groq brain, character as the face of a context-injection pipeline; knowledge updates must not touch the persona. Framer-motion orb keeps zero new dependencies and design-system compliance.
+- **Consequences:** Ship a feature → update knowledge.ts (drift-guard test pins sections to NAV_ITEMS). Guardrails pinned by tests: no cross-role leakage, no prompt/provider disclosure, cannot_do honesty, key never audited or client-exposed.
+
 ---
 
 ## Template for new decisions

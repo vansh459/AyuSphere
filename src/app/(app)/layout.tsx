@@ -8,6 +8,7 @@ import { can } from "@/lib/rbac";
 import { getDb } from "@/db";
 import { alerts } from "@/db/schema";
 import { Sidebar } from "@/components/app/sidebar";
+import { GuideWidget } from "@/components/app/guide-widget";
 import { Button } from "@/components/ui/button";
 
 const ROLE_LABEL: Record<string, string> = {
@@ -116,6 +117,7 @@ export default async function AppLayout({
 
         <main className="flex-1 px-4 py-6 md:px-6">{children}</main>
       </div>
+      <GuideWidget userName={user.name ?? "there"} />
     </div>
   );
 }

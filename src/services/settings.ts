@@ -135,6 +135,122 @@ export async function saveAlertConfig(
   });
 }
 
+// ---------- Sphera guide (Groq) settings ----------
+
+export const GUIDE_SETTINGS_KEY = "guide_ai";
+
+export const guideConfigSchema = z.object({
+  model: z.string().min(1),
+  apiKey: z.string().min(8),
+});
+
+export type GuideConfig = z.infer<typeof guideConfigSchema>;
+
+/** settings row first, env fallback (GROQ_API_KEY/GROQ_MODEL), else null */
+export async function getGuideConfig(db: Db): Promise<GuideConfig | null> {
+  try {
+    const [row] = await db
+      .select()
+      .from(appSettings)
+      .where(eq(appSettings.key, GUIDE_SETTINGS_KEY))
+      .limit(1);
+    if (row) {
+      const parsed = guideConfigSchema.safeParse(row.value);
+      if (parsed.success) return parsed.data;
+    }
+  } catch {
+    /* fall through to env */
+  }
+  if (process.env.GROQ_API_KEY) {
+    return {
+      model: process.env.GROQ_MODEL ?? "openai/gpt-oss-20b",
+      apiKey: process.env.GROQ_API_KEY,
+    };
+  }
+  return null;
+}
+
+export type GuideSettingsView = {
+  model: string | null;
+  keySet: boolean;
+  source: "settings" | "env" | "none";
+};
+
+export async function getGuideSettingsView(db: Db): Promise<GuideSettingsView> {
+  const [row] = await db
+    .select()
+    .from(appSettings)
+    .where(eq(appSettings.key, GUIDE_SETTINGS_KEY))
+    .limit(1);
+  if (row) {
+    const parsed = guideConfigSchema.safeParse(row.value);
+    if (parsed.success) {
+      return { model: parsed.data.model, keySet: true, source: "settings" };
+    }
+  }
+  if (process.env.GROQ_API_KEY) {
+    return {
+      model: process.env.GROQ_MODEL ?? "openai/gpt-oss-20b",
+      keySet: true,
+      source: "env",
+    };
+  }
+  return { model: null, keySet: false, source: "none" };
+}
+
+export const saveGuideSettingsInput = z.object({
+  model: z.string().min(1).max(80),
+  /** blank = keep the previously stored key */
+  apiKey: z.string().max(300).optional(),
+});
+
+export async function saveGuideSettings(
+  db: Db,
+  actor: Actor,
+  input: z.infer<typeof saveGuideSettingsInput>,
+) {
+  assertCan(actor.role, "users.manage");
+  const data = saveGuideSettingsInput.parse(input);
+
+  const [existing] = await db
+    .select()
+    .from(appSettings)
+    .where(eq(appSettings.key, GUIDE_SETTINGS_KEY))
+    .limit(1);
+  const existingKey =
+    existing && guideConfigSchema.safeParse(existing.value).success
+      ? (existing.value as { apiKey: string }).apiKey
+      : undefined;
+
+  const apiKey = data.apiKey?.trim() || existingKey;
+  if (!apiKey || apiKey.length < 8) {
+    throw new Error("a Groq API key is required (none stored yet)");
+  }
+
+  const value = { model: data.model.trim(), apiKey };
+  guideConfigSchema.parse(value);
+
+  return withAudit(db, actor, "settings.guide_update", async (tx) => {
+    await tx
+      .insert(appSettings)
+      .values({ key: GUIDE_SETTINGS_KEY, value, updatedBy: actor.id })
+      .onConflictDoUpdate({
+        target: appSettings.key,
+        set: { value, updatedBy: actor.id, updatedAt: sql`now()` },
+      });
+    return {
+      result: { model: value.model },
+      entityType: "app_setting",
+      entityId: GUIDE_SETTINGS_KEY,
+      // the key itself is NEVER audited
+      after: {
+        model: value.model,
+        apiKeyChanged: Boolean(data.apiKey?.trim()),
+      },
+    };
+  });
+}
+
 // ---------- AI-model configuration ----------
 
 export const saveAiSettingsInput = z.object({
