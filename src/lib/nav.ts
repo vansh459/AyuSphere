@@ -33,6 +33,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/sites", label: "Site Management", icon: "map-pin", capability: "site.manage" },
   { href: "/visits", label: "Visit Schedule", icon: "calendar", capability: "crf.enter" },
   { href: "/doctor-note", label: "Data Entry (eCRF)", icon: "scan", capability: "crf.enter" },
+  { href: "/extractions", label: "Extractions", icon: "file-text", capability: "crf.enter" },
   { href: "/adverse-events", label: "Adverse Events", icon: "alert-triangle", capability: "ae.capture" },
   { href: "/monitoring", label: "Monitoring", icon: "clipboard", capability: "monitoring.log" },
   { href: "/alerts", label: "Alerts", icon: "bell", capability: "alert.acknowledge" },
