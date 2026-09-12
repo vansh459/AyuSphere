@@ -77,7 +77,7 @@ export async function getGuideConfig(db: Db): Promise<GuideConfig | null> {
   }
   if (process.env.GROQ_API_KEY) {
     return {
-      model: process.env.GROQ_MODEL ?? "openai/gpt-oss-120b",
+      model: process.env.GROQ_MODEL ?? "openai/gpt-oss-20b",
       apiKey: process.env.GROQ_API_KEY,
     };
   }
@@ -104,7 +104,7 @@ export async function getGuideSettingsView(db: Db): Promise<GuideSettingsView> {
   }
   if (process.env.GROQ_API_KEY) {
     return {
-      model: process.env.GROQ_MODEL ?? "openai/gpt-oss-120b",
+      model: process.env.GROQ_MODEL ?? "openai/gpt-oss-20b",
       keySet: true,
       source: "env",
     };

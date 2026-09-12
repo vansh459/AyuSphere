@@ -43,7 +43,15 @@ export async function streamGroqChat({
       "content-type": "application/json",
       authorization: `Bearer ${apiKey}`,
     },
-    body: JSON.stringify({ model, temperature, stream: true, messages }),
+    body: JSON.stringify({
+      model,
+      temperature,
+      stream: true,
+      messages,
+      // gpt-oss models "think" before the first content token; keep the
+      // silent phase short so streaming feels alive (and Vercel never 504s)
+      ...(model.includes("gpt-oss") ? { reasoning_effort: "low" } : {}),
+    }),
   });
 
   if (!res.ok || !res.body) {

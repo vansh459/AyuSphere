@@ -207,8 +207,8 @@ export default async function SettingsPage(props: {
                 <Input
                   id="guideModel"
                   name="guideModel"
-                  defaultValue={guide.model ?? "openai/gpt-oss-120b"}
-                  placeholder="openai/gpt-oss-120b"
+                  defaultValue={guide.model ?? "openai/gpt-oss-20b"}
+                  placeholder="openai/gpt-oss-20b"
                   required
                 />
               </div>
