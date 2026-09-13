@@ -150,7 +150,11 @@ export function Sidebar({
 
   return (
     <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col bg-primary-deep text-white max-md:hidden">
-      <div className="flex items-center gap-2.5 px-5 py-5">
+      <Link
+        href="/dashboard"
+        className="flex items-center gap-2.5 px-5 py-5 transition-opacity duration-200 hover:opacity-90 active:scale-[0.98]"
+        aria-label="AyuSphere Dashboard"
+      >
         <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary">
           <Leaf className="h-5 w-5" />
         </span>
@@ -160,7 +164,7 @@ export function Sidebar({
             Research Today · Healthier Tomorrow
           </p>
         </div>
-      </div>
+      </Link>
 
       <div
         className="relative flex min-h-0 flex-1 flex-col"
@@ -205,10 +209,10 @@ export function Sidebar({
                           : "bg-white/20 text-white",
                     )}
                     style={{
-                      fontSize: "10px",
+                      fontSize: "11px",
                       lineHeight: 1,
-                      height: "16px",
-                      minWidth: "16px",
+                      height: "18px",
+                      minWidth: "18px",
                     }}
                   >
                     {count > 9 ? "9+" : count}

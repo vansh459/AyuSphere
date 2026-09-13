@@ -98,12 +98,13 @@ export default async function AppLayout({
                   <Bell className="h-5 w-5 opacity-70" />
                   {openAlerts > 0 ? (
                     <span
-                      className="absolute -right-2 -top-1.5 flex items-center justify-center rounded-full bg-danger px-1 text-white shadow-xs"
+                      className="absolute -right-2.5 -top-1.5 flex items-center justify-center rounded-full bg-danger text-white shadow-xs"
                       style={{
-                        fontSize: "10px",
+                        fontSize: "11px",
                         lineHeight: 1,
-                        height: "16px",
-                        minWidth: "16px",
+                        height: "18px",
+                        minWidth: "18px",
+                        padding: "0 5px",
                         border: "2px solid var(--color-surface, #ffffff)",
                         fontWeight: 700,
                       }}
