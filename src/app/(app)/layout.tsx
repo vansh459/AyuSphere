@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { Bell, ChevronDown, Search } from "lucide-react";
 import { auth, signOut } from "@/lib/auth";
 import { navForRole } from "@/lib/nav";
 import { can } from "@/lib/rbac";
 import { getDb } from "@/db";
-import { alerts, messages } from "@/db/schema";
+import { adverseEvents, alerts, amendments, messages, trials } from "@/db/schema";
 import { Sidebar } from "@/components/app/sidebar";
 import { GuideWidget } from "@/components/app/guide-widget";
 import { Button } from "@/components/ui/button";
@@ -57,6 +57,37 @@ export default async function AppLayout({
     }
   }
 
+  let openAdverseEvents = 0;
+  if (can(user.role, "ae.capture") || can(user.role, "ae.review")) {
+    try {
+      const [res] = await getDb()
+        .select({ count: sql<number>`count(*)::int` })
+        .from(adverseEvents)
+        .where(inArray(adverseEvents.status, ["open", "under_review"]));
+      openAdverseEvents = res?.count ?? 0;
+    } catch {
+      openAdverseEvents = 0;
+    }
+  }
+
+  let pendingEthics = 0;
+  if (can(user.role, "trial.ethicsReview")) {
+    try {
+      const db = getDb();
+      const [tRes] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(trials)
+        .where(eq(trials.status, "iec_review"));
+      const [aRes] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(amendments)
+        .where(eq(amendments.status, "submitted"));
+      pendingEthics = (tRes?.count ?? 0) + (aRes?.count ?? 0);
+    } catch {
+      pendingEthics = 0;
+    }
+  }
+
   const initials = (user.name ?? "?")
     .split(" ")
     .map((w) => w[0])
@@ -73,6 +104,8 @@ export default async function AppLayout({
           badges={{
             "/messages": unreadMessages,
             "/alerts": openAlerts,
+            "/adverse-events": openAdverseEvents,
+            "/ethics": pendingEthics,
           }}
         />
       </div>

@@ -202,11 +202,9 @@ export function Sidebar({
                   <span
                     className={cn(
                       "flex shrink-0 items-center justify-center rounded-full px-1.5 font-bold shadow-xs",
-                      item.href === "/alerts"
-                        ? "bg-danger text-white"
-                        : active
-                          ? "bg-primary-deep text-white"
-                          : "bg-white/20 text-white",
+                      active
+                        ? "bg-primary-deep text-white"
+                        : "bg-white/20 text-white",
                     )}
                     style={{
                       fontSize: "11px",
