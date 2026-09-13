@@ -46,3 +46,6 @@ next-env.d.ts
 
 # python
 __pycache__/
+
+# live E2E screenshots
+.e2e-shots/
