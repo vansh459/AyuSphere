@@ -1,13 +1,12 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { and, eq, inArray, isNull, sql } from "drizzle-orm";
-import { Bell, ChevronDown, Search } from "lucide-react";
+import { ChevronDown, Search } from "lucide-react";
 import { auth, signOut } from "@/lib/auth";
 import { navForRole } from "@/lib/nav";
 import { can } from "@/lib/rbac";
 import { getDb } from "@/db";
-import { adverseEvents, alerts, amendments, messages, trials } from "@/db/schema";
+import { badgeCounts, type BadgeCounts } from "@/services/badges";
 import { Sidebar } from "@/components/app/sidebar";
+import { TopbarBell } from "@/components/app/live-badges";
 import { GuideWidget } from "@/components/app/guide-widget";
 import { MessageToast } from "@/components/app/message-toast";
 import { Button } from "@/components/ui/button";
@@ -32,64 +31,20 @@ export default async function AppLayout({
   const { user } = session;
   const items = navForRole(user.role);
 
-  let openAlerts = 0;
-  let unreadMessages = 0;
-  let openAdverseEvents = 0;
-  let pendingEthics = 0;
-
+  // initial counts only — the layout renders once per hard load, so the
+  // Sidebar/TopbarBell keep these live client-side via /api/badges
+  let badges: BadgeCounts = {
+    "/messages": 0,
+    "/alerts": 0,
+    "/adverse-events": 0,
+    "/ethics": 0,
+  };
   try {
-    const db = getDb();
-    const [openAlertsRes, unreadMessagesRes, openAeRes, ethicsTrialsRes, ethicsAmendRes] =
-      await Promise.all([
-        can(user.role, "alert.acknowledge")
-          ? db
-              .select({ count: sql<number>`count(*)::int` })
-              .from(alerts)
-              .where(eq(alerts.status, "open"))
-              .catch(() => [{ count: 0 }])
-          : Promise.resolve([{ count: 0 }]),
-        can(user.role, "chat.use")
-          ? db
-              .select({ count: sql<number>`count(*)::int` })
-              .from(messages)
-              .where(and(eq(messages.recipientId, user.id), isNull(messages.readAt)))
-              .catch(() => [{ count: 0 }])
-          : Promise.resolve([{ count: 0 }]),
-        can(user.role, "ae.capture") || can(user.role, "ae.review")
-          ? db
-              .select({ count: sql<number>`count(*)::int` })
-              .from(adverseEvents)
-              .where(inArray(adverseEvents.status, ["open", "under_review"]))
-              .catch(() => [{ count: 0 }])
-          : Promise.resolve([{ count: 0 }]),
-        can(user.role, "trial.ethicsReview")
-          ? db
-              .select({ count: sql<number>`count(*)::int` })
-              .from(trials)
-              .where(eq(trials.status, "iec_review"))
-              .catch(() => [{ count: 0 }])
-          : Promise.resolve([{ count: 0 }]),
-        can(user.role, "trial.ethicsReview")
-          ? db
-              .select({ count: sql<number>`count(*)::int` })
-              .from(amendments)
-              .where(eq(amendments.status, "submitted"))
-              .catch(() => [{ count: 0 }])
-          : Promise.resolve([{ count: 0 }]),
-      ]);
-
-    openAlerts = Number(openAlertsRes[0]?.count ?? 0);
-    unreadMessages = Number(unreadMessagesRes[0]?.count ?? 0);
-    openAdverseEvents = Number(openAeRes[0]?.count ?? 0);
-    pendingEthics =
-      Number(ethicsTrialsRes[0]?.count ?? 0) +
-      Number(ethicsAmendRes[0]?.count ?? 0);
+    badges = await badgeCounts(getDb(), { id: user.id, role: user.role });
   } catch {
-    openAlerts = 0;
-    unreadMessages = 0;
-    openAdverseEvents = 0;
-    pendingEthics = 0;
+    /* keep zeros */
   }
+  const openAlerts = badges["/alerts"];
 
   const initials = (user.name ?? "?")
     .split(" ")
@@ -102,15 +57,7 @@ export default async function AppLayout({
     <div className="flex min-h-screen w-full">
       {/* chrome hides when printing — DSMB/SAE report artifacts print clean */}
       <div className="contents print:hidden">
-        <Sidebar
-          items={items}
-          badges={{
-            "/messages": unreadMessages,
-            "/alerts": openAlerts,
-            "/adverse-events": openAdverseEvents,
-            "/ethics": pendingEthics,
-          }}
-        />
+        <Sidebar items={items} badges={badges} />
       </div>
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-10 flex items-center gap-4 border-b border-line bg-surface px-4 py-3 md:px-6 print:hidden">
@@ -125,20 +72,7 @@ export default async function AppLayout({
 
           <div className="ml-auto flex items-center gap-3">
             {can(user.role, "alert.acknowledge") ? (
-              <Link
-                href="/alerts"
-                className="flex h-10 w-10 items-center justify-center rounded-xl text-ink transition-colors duration-200 hover:bg-primary-soft"
-                aria-label={`Alerts (${openAlerts} open)`}
-              >
-                <span className="relative inline-flex items-center justify-center">
-                  <Bell className="h-5 w-5 text-ink" />
-                  {openAlerts > 0 ? (
-                    <span className="pointer-events-none absolute right-0 top-0 flex items-center justify-center rounded-full bg-danger text-white shadow-xs topbar-bell-badge">
-                      {openAlerts > 9 ? "9+" : openAlerts}
-                    </span>
-                  ) : null}
-                </span>
-              </Link>
+              <TopbarBell initialCount={openAlerts} />
             ) : null}
 
             <details className="group relative">

@@ -6,6 +6,7 @@ import { AlertTriangle, Loader2, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { refreshBadges } from "@/components/app/live-badges";
 import { acknowledgeAlertAction } from "@/app/(app)/alerts/actions";
 
 interface UnreadMessage {
@@ -129,6 +130,7 @@ function NotificationToastInner({
       markMessageAsShown(unread.id);
       setMessage(unread);
       setIsMessageVisible(true);
+      refreshBadges(); // sidebar "Messages" count increments right away
 
       if (messageTimerRef.current) clearTimeout(messageTimerRef.current);
       messageTimerRef.current = setTimeout(() => {
@@ -165,6 +167,7 @@ function NotificationToastInner({
       setAlert(latestAlert);
       setIsAcknowledged(false);
       setIsAlertVisible(true);
+      refreshBadges(); // bell + sidebar "Alerts" count increments right away
 
       if (alertTimerRef.current) clearTimeout(alertTimerRef.current);
       alertTimerRef.current = setTimeout(() => {
@@ -268,6 +271,7 @@ function NotificationToastInner({
       markAlertAsShown(alert.id);
       setIsAcknowledging(false);
       setIsAcknowledged(true);
+      refreshBadges(); // bell + sidebar counts drop immediately
 
       // Broadcast to other tabs
       if (typeof BroadcastChannel !== "undefined") {

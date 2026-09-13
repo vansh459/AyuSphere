@@ -22,6 +22,7 @@ import {
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLiveBadges } from "@/components/app/live-badges";
 import type { NavItem } from "@/lib/nav";
 
 const ICONS: Record<NavItem["icon"], React.ComponentType<{ className?: string }>> = {
@@ -49,6 +50,10 @@ export function Sidebar({
   items: NavItem[];
   badges?: Record<string, number>;
 }) {
+  // server-rendered counts freeze across client navigation (the layout only
+  // renders on hard loads) — keep them live so e.g. reading a message
+  // actually clears the "Messages" badge
+  const liveBadges = useLiveBadges(badges ?? {});
   const pathname = usePathname();
   const navRef = useRef<HTMLElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
@@ -184,7 +189,7 @@ export function Sidebar({
             const Icon = ICONS[item.icon];
             const active =
               pathname === item.href || pathname.startsWith(`${item.href}/`);
-            const count = badges?.[item.href] ?? 0;
+            const count = liveBadges[item.href] ?? 0;
             return (
               <Link
                 key={item.href}

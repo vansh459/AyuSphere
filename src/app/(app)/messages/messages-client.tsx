@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Paperclip, Send, X } from "lucide-react";
 import { fadeRise } from "@/lib/motion";
 import { cn } from "@/lib/utils";
+import { refreshBadges } from "@/components/app/live-badges";
 import { DocPreview } from "@/components/app/doc-preview";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/app/shared";
@@ -138,7 +139,12 @@ export function MessagesClient({
       // ignore stale responses after the user switched threads
       if (activeIdRef.current !== withUserId) return;
       if (json.contacts) setContactList(json.contacts);
-      if (withUserId && json.messages) setThread(json.messages);
+      if (withUserId && json.messages) {
+        setThread(json.messages);
+        // opening a thread marked its messages read server-side — tell the
+        // sidebar "Messages" badge to refetch NOW, not on the next poll
+        refreshBadges();
+      }
     } catch {
       /* transient poll failure — next tick retries */
     }
