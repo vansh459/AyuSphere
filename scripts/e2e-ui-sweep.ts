@@ -76,19 +76,23 @@ async function main() {
   // 1 · sidebar variant per role
   for (const cfg of ROLES) await sweepRole(browser, cfg);
 
-  // 2 · quick-jump search (PI): protocol code → trial page
+  // 2 · quick-jump search (PI): protocol code prefix → trial page
+  // (the live DB carries real CTRI registry trials, not AYU demo codes)
   const pi = await (
     await browser.newContext({ viewport: { width: 1440, height: 900 } })
   ).newPage();
   await login(pi, "pi@aiia.demo");
-  await pi.fill('input[aria-label="Quick search"]', "AYU-001");
-  const firstResult = pi.locator('div.clay button:has-text("AYU-001")').first();
+  await pi
+    .locator('input[aria-label="Quick search"]')
+    .pressSequentially("CTRI", { delay: 40 });
+  const firstResult = pi.locator('div.clay button:has-text("CTRI")').first();
   await firstResult.waitFor({ timeout: 10_000 });
   await shot(pi, "search-dropdown");
   await firstResult.click();
   await pi.waitForURL("**/trials/**", { timeout: 15_000 });
-  check(true, "search: 'AYU-001' jumps to the trial page");
+  check(true, "search: 'CTRI' jumps to a trial page");
   await shot(pi, "search-landed-trial");
+  await pi.context().close();
 
   // 3 · Adverse Events tabs (PV)
   const pv = await (
@@ -122,8 +126,10 @@ async function main() {
     })
   ).newPage();
   await login(mobile, "coordinator@aiia.demo");
+  // the app has other <aside>s (assistant panel, toasts) — target the
+  // sidebar specifically by its fixed width class
   check(
-    (await mobile.locator("aside:visible").count()) === 0,
+    (await mobile.locator("aside.w-60:visible").count()) === 0,
     "mobile: desktop sidebar hidden",
   );
   await mobile.click('button[aria-label="Open navigation"]');
