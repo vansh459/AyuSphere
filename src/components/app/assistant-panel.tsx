@@ -104,7 +104,7 @@ export function AssistantPanel({
   }
 
   return (
-    <aside className="flex w-full flex-col overflow-hidden rounded-2xl bg-primary-deep xl:h-[40vh] xl:w-80 xl:shrink-0">
+    <aside className="flex w-full flex-col overflow-hidden rounded-2xl bg-primary-deep xl:h-[52vh] xl:w-80 xl:shrink-0">
       <div className="flex items-center gap-2 px-4 py-3 text-white">
         <Bot className="h-4 w-4" />
         <p className="font-bold">AI Assistant</p>
@@ -113,7 +113,7 @@ export function AssistantPanel({
         </Badge>
       </div>
 
-      <div className="scroll-light flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto rounded-t-2xl bg-surface p-4">
+      <div className="scroll-hidden flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto rounded-t-2xl bg-surface p-4">
         {/* tabs */}
         <div className="flex rounded-xl border border-line p-1">
           {(
