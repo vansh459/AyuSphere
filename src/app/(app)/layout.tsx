@@ -133,9 +133,7 @@ export default async function AppLayout({
                 <span className="relative inline-flex items-center justify-center">
                   <Bell className="h-5 w-5 text-ink" />
                   {openAlerts > 0 ? (
-                    <span
-                      className="pointer-events-none absolute -right-2.5 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-danger px-1 text-[11px] font-bold leading-none text-white ring-2 ring-surface shadow-xs"
-                    >
+                    <span className="pointer-events-none absolute -right-2.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-danger px-1 font-bold leading-none text-white ring-2 ring-surface shadow-xs">
                       {openAlerts > 9 ? "9+" : openAlerts}
                     </span>
                   ) : null}
