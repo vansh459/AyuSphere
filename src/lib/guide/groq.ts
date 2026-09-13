@@ -82,26 +82,21 @@ export async function streamGroqChat({
 
   const decoder = new TextDecoder();
   const encoder = new TextEncoder();
-  const reader = res.body.getReader();
   let buffer = "";
 
-  return new ReadableStream<Uint8Array>({
-    async pull(controller) {
-      const { done, value } = await reader.read();
-      if (done) {
-        controller.close();
-        return;
-      }
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() ?? "";
-      for (const line of lines) {
-        const delta = parseSseLine(line.trim());
-        if (delta) controller.enqueue(encoder.encode(delta));
-      }
-    },
-    cancel(reason) {
-      void reader.cancel(reason);
-    },
-  });
+  // pipeThrough keeps native backpressure — a hand-rolled pull() stream
+  // stalled on Vercel's Node runtime (FUNCTION_INVOCATION_TIMEOUT).
+  return res.body.pipeThrough(
+    new TransformStream<Uint8Array, Uint8Array>({
+      transform(chunk, controller) {
+        buffer += decoder.decode(chunk, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          const delta = parseSseLine(line.trim());
+          if (delta) controller.enqueue(encoder.encode(delta));
+        }
+      },
+    }),
+  );
 }
