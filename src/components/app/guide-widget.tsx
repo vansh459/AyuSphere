@@ -79,14 +79,28 @@ export function GuideWidget({ userName }: { userName: string }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const hydratedRef = useRef(false);
   const threadRef = useRef<string>("default");
+  // stick-to-bottom: auto-scroll ONLY while the user is already at the
+  // bottom — force-scrolling on every streamed chunk made scrolling up
+  // impossible (field report, 2026-09-13)
+  const pinnedRef = useRef(true);
   const reduced = useReducedMotion();
 
+  function handleThreadScroll() {
+    const el = scrollRef.current;
+    if (!el) return;
+    pinnedRef.current =
+      el.scrollHeight - el.scrollTop - el.clientHeight < 48;
+  }
+
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+    if (pinnedRef.current) {
+      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+    }
   }, [turns]);
 
   async function ask(opts: { message?: string; greet?: boolean }) {
     setError(null);
+    pinnedRef.current = true;
     setOrb("thinking");
     if (opts.message) {
       setTurns((t) => [...t, { role: "user", content: opts.message! }]);
@@ -231,7 +245,11 @@ export function GuideWidget({ userName }: { userName: string }) {
               </div>
             </div>
 
-            <div ref={scrollRef} className="scroll-light min-h-0 flex-1 space-y-3 overflow-y-auto bg-bg/50 p-3.5">
+            <div
+              ref={scrollRef}
+              onScroll={handleThreadScroll}
+              className="scroll-light min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain bg-bg/50 p-3.5"
+            >
               {turns.length === 0 && orb !== "thinking" ? (
                 <div className="rounded-2xl border border-line/60 bg-surface p-3.5 shadow-xs">
                   <p className="font-bold text-ink">
