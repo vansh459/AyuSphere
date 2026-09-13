@@ -1,20 +1,11 @@
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
 import { desc, eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { can } from "@/lib/rbac";
 import { getDb } from "@/db";
 import { alerts } from "@/db/schema";
-import { acknowledgeAlert } from "@/services/alerts";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-
-const TONE = {
-  info: "info",
-  warning: "warning",
-  danger: "danger",
-} as const;
+import { AlertsList } from "@/components/app/alerts-list";
 
 export default async function AlertsPage() {
   const session = await auth();
@@ -34,16 +25,6 @@ export default async function AlertsPage() {
     dbError = true;
   }
 
-  async function acknowledge(formData: FormData) {
-    "use server";
-    const s = await auth();
-    if (!s?.user) return;
-    const id = String(formData.get("alertId") ?? "");
-    if (!id) return;
-    await acknowledgeAlert(getDb(), { id: s.user.id, role: s.user.role }, id);
-    revalidatePath("/alerts");
-  }
-
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -60,38 +41,8 @@ export default async function AlertsPage() {
             Database not configured — set DATABASE_URL and run the seed.
           </p>
         </Card>
-      ) : rows.length === 0 ? (
-        <Card>
-          <p className="opacity-70">
-            No open alerts. The rules engine re-evaluates on every write and
-            every 10 minutes.
-          </p>
-        </Card>
       ) : (
-        <div className="flex flex-col gap-3">
-          {rows.map((a) => (
-            <Card
-              key={a.id}
-              className="flex flex-wrap items-center justify-between gap-3 p-4"
-            >
-              <div className="flex min-w-0 items-center gap-3">
-                <Badge tone={TONE[a.severity]}>{a.severity}</Badge>
-                <div className="min-w-0">
-                  <p className="font-medium">{a.message}</p>
-                  <p className="opacity-50">
-                    {a.ruleKey} · {a.createdAt.toLocaleString()}
-                  </p>
-                </div>
-              </div>
-              <form action={acknowledge}>
-                <input type="hidden" name="alertId" value={a.id} />
-                <Button variant="outline" size="sm" type="submit">
-                  Acknowledge
-                </Button>
-              </form>
-            </Card>
-          ))}
-        </div>
+        <AlertsList initialAlerts={rows} />
       )}
     </div>
   );
