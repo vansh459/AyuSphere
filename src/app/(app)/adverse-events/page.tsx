@@ -1,3 +1,4 @@
+import { TermPicker } from "@/components/app/term-picker";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { eq, inArray } from "drizzle-orm";
@@ -38,6 +39,9 @@ import { ErrorBanner } from "@/components/app/shared";
 import { EscalationClock } from "@/components/app/escalation-clock";
 
 const CAUSALITY = ["certain", "probable", "possible", "unlikely", "unrelated"];
+
+const MEDDRA_OPTIONS = MEDDRA_SUBSET.map((t) => ({ value: t.pt, hint: t.soc }));
+const WHODRUG_OPTIONS = WHODRUG_SUBSET.map((t) => ({ value: t.drugName, hint: t.drugClass }));
 
 export default async function AdverseEventsPage(props: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -260,21 +264,14 @@ export default async function AdverseEventsPage(props: {
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="term">Event term (MedDRA picker)</Label>
-              <Input
+              <TermPicker
                 id="term"
                 name="term"
-                list="meddra-terms"
+                options={MEDDRA_OPTIONS}
                 required
                 minLength={2}
                 placeholder="start typing — e.g. Nausea"
               />
-              <datalist id="meddra-terms">
-                {MEDDRA_SUBSET.map((t) => (
-                  <option key={t.code} value={t.pt}>
-                    {t.soc}
-                  </option>
-                ))}
-              </datalist>
               <p className="opacity-50">
                 an exact match auto-codes the term; free text stays uncoded
               </p>
@@ -283,19 +280,12 @@ export default async function AdverseEventsPage(props: {
               <Label htmlFor="suspectedDrug">
                 Suspected formulation (WHODrug picker)
               </Label>
-              <Input
+              <TermPicker
                 id="suspectedDrug"
                 name="suspectedDrug"
-                list="whodrug-terms"
+                options={WHODRUG_OPTIONS}
                 placeholder="e.g. Ashwagandha churna"
               />
-              <datalist id="whodrug-terms">
-                {WHODRUG_SUBSET.map((t) => (
-                  <option key={t.code} value={t.drugName}>
-                    {t.drugClass}
-                  </option>
-                ))}
-              </datalist>
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="seriousness">Seriousness</Label>
@@ -534,10 +524,10 @@ export default async function AdverseEventsPage(props: {
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="adrTerm">Reaction (MedDRA picker)</Label>
-              <Input
+              <TermPicker
                 id="adrTerm"
                 name="adrTerm"
-                list="meddra-terms"
+                options={MEDDRA_OPTIONS}
                 required
                 minLength={2}
                 placeholder="e.g. Hepatotoxicity"
@@ -545,10 +535,10 @@ export default async function AdverseEventsPage(props: {
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="adrDrug">Suspected formulation</Label>
-              <Input
+              <TermPicker
                 id="adrDrug"
                 name="adrDrug"
-                list="whodrug-terms"
+                options={WHODRUG_OPTIONS}
                 required
                 minLength={2}
                 placeholder="e.g. Arogyavardhini vati"
