@@ -1,9 +1,11 @@
 "use client";
 
 /**
- * Sphera — floating role-aware guide (D-022).
+ * Sphera — floating role-aware guide (D-028/D-029).
  * Reactive leaf-orb (idle / listening / thinking / talking states via the
- * motion catalog) + glass chat panel streaming from /api/guide.
+ * motion catalog) + glass chat panel streaming from /api/guide. Memory is
+ * SERVER-SIDE (LangGraph + guide_messages): the widget rehydrates the
+ * thread on open and only ever sends the new message + threadId.
  */
 import { useEffect, useRef, useState } from "react";
 import {
@@ -13,13 +15,28 @@ import {
   type TargetAndTransition,
   type Transition,
 } from "framer-motion";
-import { Leaf, Send, X } from "lucide-react";
+import { Leaf, RotateCcw, Send, X } from "lucide-react";
 import { DUR, EASE, sheetSlide } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import { GUIDE_NAME } from "@/lib/guide/prompt";
 
 type OrbState = "idle" | "listening" | "thinking" | "talking";
 type Turn = { role: "user" | "assistant"; content: string };
+
+const THREAD_KEY = "sphera-thread";
+
+/** stable per-browser thread id; "New chat" rotates it */
+function currentThreadId(): string {
+  try {
+    const existing = localStorage.getItem(THREAD_KEY);
+    if (existing) return existing;
+    const fresh = crypto.randomUUID();
+    localStorage.setItem(THREAD_KEY, fresh);
+    return fresh;
+  } catch {
+    return "default";
+  }
+}
 
 /** markdown-lite: **bold** for UI labels + numbered/bulleted lines */
 function renderLite(text: string): React.ReactNode {
@@ -60,7 +77,8 @@ export function GuideWidget({ userName }: { userName: string }) {
   const [orb, setOrb] = useState<OrbState>("idle");
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const greetedRef = useRef(false);
+  const hydratedRef = useRef(false);
+  const threadRef = useRef<string>("default");
   const reduced = useReducedMotion();
 
   useEffect(() => {
@@ -80,7 +98,7 @@ export function GuideWidget({ userName }: { userName: string }) {
         body: JSON.stringify({
           message: opts.message,
           greet: opts.greet,
-          history: turns.slice(-8),
+          threadId: threadRef.current,
         }),
       });
       if (!res.ok || !res.body) {
@@ -118,18 +136,46 @@ export function GuideWidget({ userName }: { userName: string }) {
     }
   }
 
+  /** rehydrate the persisted thread; greet only when it's empty */
+  async function hydrate() {
+    threadRef.current = currentThreadId();
+    try {
+      const res = await fetch(
+        `/api/guide?threadId=${encodeURIComponent(threadRef.current)}`,
+      );
+      const json = (await res.json()) as { turns?: Turn[] };
+      const stored = json.turns ?? [];
+      if (stored.length > 0) {
+        setTurns(stored);
+        return;
+      }
+    } catch {
+      /* fresh thread on any hiccup */
+    }
+    void ask({ greet: true });
+  }
+
   function toggle() {
     const next = !open;
     setOpen(next);
     setOrb(next ? "listening" : "idle");
-    if (next && !greetedRef.current) {
-      greetedRef.current = true;
-      const seen = sessionStorage.getItem("sphera-greeted");
-      if (!seen) {
-        sessionStorage.setItem("sphera-greeted", "1");
-        void ask({ greet: true });
-      }
+    if (next && !hydratedRef.current) {
+      hydratedRef.current = true;
+      void hydrate();
     }
+  }
+
+  function newChat() {
+    if (orb === "thinking") return;
+    try {
+      threadRef.current = crypto.randomUUID();
+      localStorage.setItem(THREAD_KEY, threadRef.current);
+    } catch {
+      threadRef.current = `t${Date.now()}`;
+    }
+    setTurns([]);
+    setError(null);
+    void ask({ greet: true });
   }
 
   function send() {
@@ -164,14 +210,25 @@ export function GuideWidget({ userName }: { userName: string }) {
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={toggle}
-                className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-ink/70 transition-colors duration-200 hover:bg-primary-soft hover:text-ink"
-                aria-label="Close guide"
-              >
-                <X className="h-4 w-4" />
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={newChat}
+                  className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-ink/70 transition-colors duration-200 hover:bg-primary-soft hover:text-ink"
+                  aria-label="Start a new chat"
+                  title="New chat"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={toggle}
+                  className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-ink/70 transition-colors duration-200 hover:bg-primary-soft hover:text-ink"
+                  aria-label="Close guide"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
             </div>
 
             <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto bg-bg/50 p-3.5 scroll-dark">

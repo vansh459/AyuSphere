@@ -232,6 +232,14 @@ Related docs: [development-plan.md](development-plan.md) · [architecture.md](ar
 - **Rationale:** User-approved spec: Groq brain, character as the face of a context-injection pipeline; knowledge updates must not touch the persona. Framer-motion orb keeps zero new dependencies and design-system compliance.
 - **Consequences:** Ship a feature → update knowledge.ts (drift-guard test pins sections to NAV_ITEMS). Guardrails pinned by tests: no cross-role leakage, no prompt/provider disclosure, cannot_do honesty, key never audited or client-exposed.
 
+## D-029 — Sphera v2: LangChain + LangGraph with Neon-persisted thread memory
+
+- **Date:** 2026-09-13
+- **Decision:** The guide's brain moves from a hand-rolled Groq SSE client to **LangChain + LangGraph**: a `StateGraph(MessagesAnnotation)` whose respond node streams `ChatGroq` tokens through the custom stream writer, with **server-side memory** — per-user conversation threads persisted in a new `guide_messages` table (userId + threadId + role + content). The widget no longer sends history; it rehydrates the thread via `GET /api/guide` and can rotate to a new thread. Config resolution is unchanged (Admin-saved Settings row first — one stored key serves every role — env `GROQ_API_KEY`/`GROQ_API` fallback) but the DB read is capped at 3s and the model call at 20s so nothing can ride into a platform 504; `maxDuration` raised to 60.
+- **Alternatives:** LangGraph's official `PostgresSaver` checkpointer (adds a `pg` dependency and checkpoint tables outside Drizzle migrations, untestable on PGlite); in-memory `MemorySaver` (lost on every serverless cold start); keeping the bespoke SSE client.
+- **Rationale:** User directive (LangGraph/LangChain with persistence). A custom Drizzle table keeps memory testable on PGlite (D-019/D-020), inside our migration flow, and queryable; the injectable `BaseChatModel` keeps tests offline (FakeListChatModel) while production uses ChatGroq with `reasoning_effort: low` for gpt-oss models.
+- **Consequences:** `src/lib/guide/groq.ts` deleted; new `graph.ts`/`model.ts`/`guide-chat.ts`; migration 0009. Guide chats remain communication — never audited (same stance as `messages`). Memory survives refresh, logout, and devices; "New chat" starts a fresh thread while old ones remain stored.
+
 ---
 
 ## Template for new decisions

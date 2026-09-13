@@ -6,6 +6,7 @@
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  index,
   integer,
   jsonb,
   pgEnum,
@@ -585,6 +586,29 @@ export const signatures = pgTable("signatures", {
     .notNull()
     .defaultNow(),
 });
+
+export const guideRoleEnum = pgEnum("guide_role", ["user", "assistant"]);
+
+/**
+ * Sphera guide chat memory (D-029): per-user conversation threads persisted
+ * server-side so the guide remembers across refreshes and devices. Like
+ * `messages`, guide chats are communication — content is NEVER copied into
+ * the audit trail.
+ */
+export const guideMessages = pgTable(
+  "guide_messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id").notNull(),
+    threadId: text("thread_id").notNull(),
+    role: guideRoleEnum("role").notNull(),
+    content: text("content").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("guide_msg_thread_idx").on(t.userId, t.threadId, t.createdAt)],
+);
 
 /** Insert-only (D-010). The app role gets no UPDATE/DELETE grant. */
 export const auditEvents = pgTable("audit_events", {

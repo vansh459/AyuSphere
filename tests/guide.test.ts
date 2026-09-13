@@ -11,7 +11,6 @@ import {
   getRoleKnowledge,
   trimHistory,
 } from "@/lib/guide/prompt";
-import { parseSseLine, streamGroqChat } from "@/lib/guide/groq";
 import {
   getGuideConfig,
   getGuideSettingsView,
@@ -80,60 +79,8 @@ describe("Sphera — role knowledge slicing (no cross-role leakage)", () => {
   });
 });
 
-describe("Sphera — Groq SSE parsing", () => {
-  afterEach(() => vi.unstubAllGlobals());
-
-  it("parseSseLine extracts deltas and ignores DONE/noise", () => {
-    expect(
-      parseSseLine('data: {"choices":[{"delta":{"content":"Hi"}}]}'),
-    ).toBe("Hi");
-    expect(parseSseLine("data: [DONE]")).toBeNull();
-    expect(parseSseLine(": ping")).toBeNull();
-    expect(parseSseLine("data: not-json")).toBeNull();
-  });
-
-  it("streams concatenated text from a mocked SSE body", async () => {
-    const sse = [
-      'data: {"choices":[{"delta":{"content":"Go to "}}]}',
-      'data: {"choices":[{"delta":{"content":"**Participants**."}}]}',
-      "data: [DONE]",
-    ].join("\n");
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => ({
-        ok: true,
-        status: 200,
-        body: new Response(sse).body,
-      })),
-    );
-    const stream = await streamGroqChat({
-      apiKey: "k".repeat(20),
-      model: "llama-3.3-70b-versatile",
-      messages: [{ role: "user", content: "q" }],
-    });
-    const text = await new Response(stream).text();
-    expect(text).toBe("Go to **Participants**.");
-  });
-
-  it("surfaces Groq API errors readably", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => ({
-        ok: false,
-        status: 401,
-        body: null,
-        json: async () => ({ error: { message: "Invalid API Key" } }),
-      })),
-    );
-    await expect(
-      streamGroqChat({
-        apiKey: "bad-key-123",
-        model: "m",
-        messages: [{ role: "user", content: "q" }],
-      }),
-    ).rejects.toThrow("Invalid API Key");
-  });
-});
+// Groq transport is ChatGroq (@langchain/groq) since D-029 — turn execution,
+// streaming, and memory are covered in tests/guide-chat.test.ts.
 
 describe("Sphera — guide settings service", () => {
   let db: TestDb;
