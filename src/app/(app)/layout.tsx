@@ -32,62 +32,51 @@ export default async function AppLayout({
   const { user } = session;
   const items = navForRole(user.role);
 
-  let openAlerts = 0;
-  if (can(user.role, "alert.acknowledge")) {
-    try {
-      const rows = await getDb()
-        .select({ id: alerts.id })
-        .from(alerts)
-        .where(eq(alerts.status, "open"));
-      openAlerts = rows.length;
-    } catch {
-      openAlerts = 0;
-    }
-  }
+  const db = getDb();
+  const [openAlertsRes, unreadMessagesRes, openAeRes, ethicsTrialsRes, ethicsAmendRes] =
+    await Promise.all([
+      can(user.role, "alert.acknowledge")
+        ? db
+            .select({ count: sql<number>`count(*)::int` })
+            .from(alerts)
+            .where(eq(alerts.status, "open"))
+            .catch(() => [{ count: 0 }])
+        : Promise.resolve([{ count: 0 }]),
+      can(user.role, "chat.use")
+        ? db
+            .select({ count: sql<number>`count(*)::int` })
+            .from(messages)
+            .where(and(eq(messages.recipientId, user.id), isNull(messages.readAt)))
+            .catch(() => [{ count: 0 }])
+        : Promise.resolve([{ count: 0 }]),
+      can(user.role, "ae.capture") || can(user.role, "ae.review")
+        ? db
+            .select({ count: sql<number>`count(*)::int` })
+            .from(adverseEvents)
+            .where(inArray(adverseEvents.status, ["open", "under_review"]))
+            .catch(() => [{ count: 0 }])
+        : Promise.resolve([{ count: 0 }]),
+      can(user.role, "trial.ethicsReview")
+        ? db
+            .select({ count: sql<number>`count(*)::int` })
+            .from(trials)
+            .where(eq(trials.status, "iec_review"))
+            .catch(() => [{ count: 0 }])
+        : Promise.resolve([{ count: 0 }]),
+      can(user.role, "trial.ethicsReview")
+        ? db
+            .select({ count: sql<number>`count(*)::int` })
+            .from(amendments)
+            .where(eq(amendments.status, "submitted"))
+            .catch(() => [{ count: 0 }])
+        : Promise.resolve([{ count: 0 }]),
+    ]);
 
-  let unreadMessages = 0;
-  if (can(user.role, "chat.use")) {
-    try {
-      const [res] = await getDb()
-        .select({ count: sql<number>`count(*)::int` })
-        .from(messages)
-        .where(and(eq(messages.recipientId, user.id), isNull(messages.readAt)));
-      unreadMessages = res?.count ?? 0;
-    } catch {
-      unreadMessages = 0;
-    }
-  }
-
-  let openAdverseEvents = 0;
-  if (can(user.role, "ae.capture") || can(user.role, "ae.review")) {
-    try {
-      const [res] = await getDb()
-        .select({ count: sql<number>`count(*)::int` })
-        .from(adverseEvents)
-        .where(inArray(adverseEvents.status, ["open", "under_review"]));
-      openAdverseEvents = res?.count ?? 0;
-    } catch {
-      openAdverseEvents = 0;
-    }
-  }
-
-  let pendingEthics = 0;
-  if (can(user.role, "trial.ethicsReview")) {
-    try {
-      const db = getDb();
-      const [tRes] = await db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(trials)
-        .where(eq(trials.status, "iec_review"));
-      const [aRes] = await db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(amendments)
-        .where(eq(amendments.status, "submitted"));
-      pendingEthics = (tRes?.count ?? 0) + (aRes?.count ?? 0);
-    } catch {
-      pendingEthics = 0;
-    }
-  }
+  const openAlerts = openAlertsRes[0]?.count ?? 0;
+  const unreadMessages = unreadMessagesRes[0]?.count ?? 0;
+  const openAdverseEvents = openAeRes[0]?.count ?? 0;
+  const pendingEthics =
+    (ethicsTrialsRes[0]?.count ?? 0) + (ethicsAmendRes[0]?.count ?? 0);
 
   const initials = (user.name ?? "?")
     .split(" ")

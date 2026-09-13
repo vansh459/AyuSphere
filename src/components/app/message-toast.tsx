@@ -66,12 +66,22 @@ function MessageToastInner() {
   };
 
   useEffect(() => {
-    // Initial check after 3 seconds, then poll every 8 seconds
-    const initial = setTimeout(checkUnread, 3000);
-    const interval = setInterval(checkUnread, 8000);
+    // Immediate check on mount (0ms delay)
+    checkUnread();
+
+    // Fast polling every 3 seconds for snappy notification
+    const interval = setInterval(checkUnread, 3000);
+
+    const onFocus = () => {
+      checkUnread();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+
     return () => {
-      clearTimeout(initial);
       clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, [pathname, activeWith]);

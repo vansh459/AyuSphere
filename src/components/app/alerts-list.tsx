@@ -39,11 +39,11 @@ export function AlertsList({ initialAlerts }: AlertsListProps) {
       setSubmittingIds((prev) => ({ ...prev, [id]: false }));
       setConfirmedIds((prev) => ({ ...prev, [id]: true }));
 
-      // 450ms reassurance window so the user clearly registers success
+      // 300ms reassurance window so the user clearly registers success
       setTimeout(() => {
         setCollapsingIds((prev) => ({ ...prev, [id]: true }));
 
-        // 350ms smooth height collapse & slide out
+        // 250ms smooth height collapse & slide out
         setTimeout(() => {
           setAlertList((prev) => prev.filter((a) => a.id !== id));
           setConfirmedIds((prev) => {
@@ -56,8 +56,8 @@ export function AlertsList({ initialAlerts }: AlertsListProps) {
             delete next[id];
             return next;
           });
-        }, 350);
-      }, 450);
+        }, 250);
+      }, 300);
     } catch {
       setSubmittingIds((prev) => ({ ...prev, [id]: false }));
     }
@@ -85,7 +85,7 @@ export function AlertsList({ initialAlerts }: AlertsListProps) {
           <div
             key={a.id}
             className={cn(
-              "overflow-hidden transition-all duration-350 ease-[cubic-bezier(0.4,0,0.2,1)]",
+              "overflow-hidden transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]",
               isCollapsing
                 ? "max-h-0 opacity-0 scale-[0.98] py-0 my-0 border-0"
                 : "max-h-48 opacity-100 scale-100",
