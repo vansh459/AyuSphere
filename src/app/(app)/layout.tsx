@@ -9,6 +9,7 @@ import { getDb } from "@/db";
 import { adverseEvents, alerts, amendments, messages, trials } from "@/db/schema";
 import { Sidebar } from "@/components/app/sidebar";
 import { GuideWidget } from "@/components/app/guide-widget";
+import { MessageToast } from "@/components/app/message-toast";
 import { Button } from "@/components/ui/button";
 
 const ROLE_LABEL: Record<string, string> = {
@@ -184,6 +185,7 @@ export default async function AppLayout({
         <main className="flex-1 px-4 py-6 md:px-6">{children}</main>
       </div>
       <GuideWidget userName={user.name ?? "there"} />
+      {can(user.role, "chat.use") ? <MessageToast /> : null}
     </div>
   );
 }
