@@ -54,7 +54,7 @@ function NotificationToastInner({
   // Message state
   const [message, setMessage] = useState<UnreadMessage | null>(null);
   const [isMessageVisible, setIsMessageVisible] = useState(false);
-  const dismissedMessagesRef = useRef<Set<string>>(new Set());
+  const shownMessagesRef = useRef<Set<string>>(new Set());
   const messageTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Alert state
@@ -62,8 +62,46 @@ function NotificationToastInner({
   const [isAlertVisible, setIsAlertVisible] = useState(false);
   const [isAcknowledging, setIsAcknowledging] = useState(false);
   const [isAcknowledged, setIsAcknowledged] = useState(false);
-  const dismissedAlertsRef = useRef<Set<string>>(new Set());
+  const shownAlertsRef = useRef<Set<string>>(new Set());
   const alertTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Check if a message was already toasted in this session
+  const isMessageAlreadyShown = (id: string) => {
+    if (shownMessagesRef.current.has(id)) return true;
+    try {
+      return sessionStorage.getItem(`seen_toast_msg_${id}`) === "1";
+    } catch {
+      return false;
+    }
+  };
+
+  const markMessageAsShown = (id: string) => {
+    shownMessagesRef.current.add(id);
+    try {
+      sessionStorage.setItem(`seen_toast_msg_${id}`, "1");
+    } catch {
+      // ignore storage errors
+    }
+  };
+
+  // Check if an alert was already toasted in this session
+  const isAlertAlreadyShown = (id: string) => {
+    if (shownAlertsRef.current.has(id)) return true;
+    try {
+      return sessionStorage.getItem(`seen_toast_alert_${id}`) === "1";
+    } catch {
+      return false;
+    }
+  };
+
+  const markAlertAsShown = (id: string) => {
+    shownAlertsRef.current.add(id);
+    try {
+      sessionStorage.setItem(`seen_toast_alert_${id}`, "1");
+    } catch {
+      // ignore storage errors
+    }
+  };
 
   // Poll for messages
   const checkUnreadMessages = async () => {
@@ -78,13 +116,17 @@ function NotificationToastInner({
       const unread: UnreadMessage | null = data.message;
 
       if (!unread) return;
-      if (dismissedMessagesRef.current.has(unread.id)) return;
+      // If this message was already toasted once, do not re-show it
+      if (isMessageAlreadyShown(unread.id)) return;
 
       // Skip toast if user is actively viewing this exact conversation in /messages
       if (pathname === "/messages" && activeWith === unread.senderId) {
+        markMessageAsShown(unread.id);
         return;
       }
 
+      // Mark as shown so subsequent polls never re-trigger the same message
+      markMessageAsShown(unread.id);
       setMessage(unread);
       setIsMessageVisible(true);
 
@@ -115,8 +157,11 @@ function NotificationToastInner({
       const latestAlert: UnreadAlert | null = data.alert;
 
       if (!latestAlert) return;
-      if (dismissedAlertsRef.current.has(latestAlert.id)) return;
+      // If this alert was already toasted once, do not re-show it
+      if (isAlertAlreadyShown(latestAlert.id)) return;
 
+      // Mark as shown so subsequent polls never re-trigger the same alert
+      markAlertAsShown(latestAlert.id);
       setAlert(latestAlert);
       setIsAcknowledged(false);
       setIsAlertVisible(true);
@@ -190,27 +235,27 @@ function NotificationToastInner({
 
   // Message handlers
   const handleDismissMessage = () => {
-    if (message) dismissedMessagesRef.current.add(message.id);
+    if (message) markMessageAsShown(message.id);
     setIsMessageVisible(false);
     if (messageTimerRef.current) clearTimeout(messageTimerRef.current);
   };
 
   const handleReplyMessage = () => {
     if (!message) return;
-    dismissedMessagesRef.current.add(message.id);
+    markMessageAsShown(message.id);
     setIsMessageVisible(false);
     router.push(`/messages?with=${encodeURIComponent(message.senderId)}`);
   };
 
   // Alert handlers
   const handleDismissAlert = () => {
-    if (alert) dismissedAlertsRef.current.add(alert.id);
+    if (alert) markAlertAsShown(alert.id);
     setIsAlertVisible(false);
     if (alertTimerRef.current) clearTimeout(alertTimerRef.current);
   };
 
   const handleReviewAlert = () => {
-    if (alert) dismissedAlertsRef.current.add(alert.id);
+    if (alert) markAlertAsShown(alert.id);
     setIsAlertVisible(false);
     router.push("/alerts");
   };
@@ -220,7 +265,7 @@ function NotificationToastInner({
     setIsAcknowledging(true);
     try {
       await acknowledgeAlertAction(alert.id);
-      dismissedAlertsRef.current.add(alert.id);
+      markAlertAsShown(alert.id);
       setIsAcknowledging(false);
       setIsAcknowledged(true);
 
