@@ -2,9 +2,11 @@
 
 import { Suspense, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { X } from "lucide-react";
+import { AlertTriangle, Loader2, X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { acknowledgeAlertAction } from "@/app/(app)/alerts/actions";
 
 interface UnreadMessage {
   id: string;
@@ -13,6 +15,15 @@ interface UnreadMessage {
   senderRole: string;
   body: string;
   attachmentName: string | null;
+  createdAt: string;
+}
+
+interface UnreadAlert {
+  id: string;
+  ruleKey: string;
+  entityRef: string;
+  severity: "danger" | "warning" | "info";
+  message: string;
   createdAt: string;
 }
 
@@ -26,18 +37,37 @@ const ROLE_LABEL: Record<string, string> = {
   regulator: "Regulator",
 };
 
-function MessageToastInner() {
+interface NotificationToastProps {
+  canChat?: boolean;
+  canAlerts?: boolean;
+}
+
+function NotificationToastInner({
+  canChat = true,
+  canAlerts = false,
+}: NotificationToastProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const activeWith = searchParams.get("with");
 
+  // Message state
   const [message, setMessage] = useState<UnreadMessage | null>(null);
-  const [isVisible, setIsVisible] = useState(false);
-  const dismissedIdsRef = useRef<Set<string>>(new Set());
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const [isMessageVisible, setIsMessageVisible] = useState(false);
+  const dismissedMessagesRef = useRef<Set<string>>(new Set());
+  const messageTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const checkUnread = async () => {
+  // Alert state
+  const [alert, setAlert] = useState<UnreadAlert | null>(null);
+  const [isAlertVisible, setIsAlertVisible] = useState(false);
+  const [isAcknowledging, setIsAcknowledging] = useState(false);
+  const [isAcknowledged, setIsAcknowledged] = useState(false);
+  const dismissedAlertsRef = useRef<Set<string>>(new Set());
+  const alertTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Poll for messages
+  const checkUnreadMessages = async () => {
+    if (!canChat) return;
     try {
       const res = await fetch("/api/messages/latest-unread", {
         cache: "no-store",
@@ -48,173 +78,370 @@ function MessageToastInner() {
       const unread: UnreadMessage | null = data.message;
 
       if (!unread) return;
-      if (dismissedIdsRef.current.has(unread.id)) return;
+      if (dismissedMessagesRef.current.has(unread.id)) return;
 
-      // Skip toast if user is actively reading this exact thread in /messages
+      // Skip toast if user is actively viewing this exact conversation in /messages
       if (pathname === "/messages" && activeWith === unread.senderId) {
         return;
       }
 
       setMessage(unread);
-      setIsVisible(true);
+      setIsMessageVisible(true);
 
-      // Auto dismiss after 6 seconds if not hovered
-      if (timerRef.current) clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(() => {
-        setIsVisible(false);
+      if (messageTimerRef.current) clearTimeout(messageTimerRef.current);
+      messageTimerRef.current = setTimeout(() => {
+        setIsMessageVisible(false);
       }, 6000);
     } catch {
       // transient poll failure
     }
   };
 
-  useEffect(() => {
-    // Immediate check on mount (0ms delay)
-    checkUnread();
-
-    // Fast polling every 1.2 seconds for ultra-responsive notification
-    const interval = setInterval(checkUnread, 1200);
-
-    const onFocus = () => {
-      checkUnread();
-    };
-    window.addEventListener("focus", onFocus);
-    document.addEventListener("visibilitychange", onFocus);
-
-    let bc: BroadcastChannel | null = null;
-    if (typeof BroadcastChannel !== "undefined") {
-      try {
-        bc = new BroadcastChannel("ayusphere_messages");
-        bc.onmessage = () => {
-          checkUnread();
-        };
-      } catch {
-        // ignore
-      }
+  // Poll for critical safety / protocol alerts
+  const checkUnreadAlerts = async () => {
+    if (!canAlerts) return;
+    // Suppress alert toasts if user is already on the alerts dashboard
+    if (pathname === "/alerts") {
+      setIsAlertVisible(false);
+      return;
     }
+    try {
+      const res = await fetch("/api/alerts/latest-unread", {
+        cache: "no-store",
+        headers: { "Cache-Control": "no-cache" },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const latestAlert: UnreadAlert | null = data.alert;
 
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener("focus", onFocus);
-      document.removeEventListener("visibilitychange", onFocus);
-      if (timerRef.current) clearTimeout(timerRef.current);
-      if (bc) bc.close();
-    };
-  }, [pathname, activeWith]);
+      if (!latestAlert) return;
+      if (dismissedAlertsRef.current.has(latestAlert.id)) return;
 
-  const handleDismiss = () => {
-    if (message) dismissedIdsRef.current.add(message.id);
-    setIsVisible(false);
-    if (timerRef.current) clearTimeout(timerRef.current);
+      setAlert(latestAlert);
+      setIsAcknowledged(false);
+      setIsAlertVisible(true);
+
+      if (alertTimerRef.current) clearTimeout(alertTimerRef.current);
+      alertTimerRef.current = setTimeout(() => {
+        setIsAlertVisible(false);
+      }, 7000);
+    } catch {
+      // transient poll failure
+    }
   };
 
-  const handleReply = () => {
+  useEffect(() => {
+    if (canChat) {
+      checkUnreadMessages();
+      const interval = setInterval(checkUnreadMessages, 1200);
+
+      const onFocus = () => checkUnreadMessages();
+      window.addEventListener("focus", onFocus);
+      document.addEventListener("visibilitychange", onFocus);
+
+      let bc: BroadcastChannel | null = null;
+      if (typeof BroadcastChannel !== "undefined") {
+        try {
+          bc = new BroadcastChannel("ayusphere_messages");
+          bc.onmessage = () => checkUnreadMessages();
+        } catch {
+          // ignore
+        }
+      }
+
+      return () => {
+        clearInterval(interval);
+        window.removeEventListener("focus", onFocus);
+        document.removeEventListener("visibilitychange", onFocus);
+        if (messageTimerRef.current) clearTimeout(messageTimerRef.current);
+        if (bc) bc.close();
+      };
+    }
+  }, [canChat, pathname, activeWith]);
+
+  useEffect(() => {
+    if (canAlerts) {
+      checkUnreadAlerts();
+      const interval = setInterval(checkUnreadAlerts, 2000);
+
+      const onFocus = () => checkUnreadAlerts();
+      window.addEventListener("focus", onFocus);
+      document.addEventListener("visibilitychange", onFocus);
+
+      let bc: BroadcastChannel | null = null;
+      if (typeof BroadcastChannel !== "undefined") {
+        try {
+          bc = new BroadcastChannel("ayusphere_alerts");
+          bc.onmessage = () => checkUnreadAlerts();
+        } catch {
+          // ignore
+        }
+      }
+
+      return () => {
+        clearInterval(interval);
+        window.removeEventListener("focus", onFocus);
+        document.removeEventListener("visibilitychange", onFocus);
+        if (alertTimerRef.current) clearTimeout(alertTimerRef.current);
+        if (bc) bc.close();
+      };
+    }
+  }, [canAlerts, pathname]);
+
+  // Message handlers
+  const handleDismissMessage = () => {
+    if (message) dismissedMessagesRef.current.add(message.id);
+    setIsMessageVisible(false);
+    if (messageTimerRef.current) clearTimeout(messageTimerRef.current);
+  };
+
+  const handleReplyMessage = () => {
     if (!message) return;
-    dismissedIdsRef.current.add(message.id);
-    setIsVisible(false);
+    dismissedMessagesRef.current.add(message.id);
+    setIsMessageVisible(false);
     router.push(`/messages?with=${encodeURIComponent(message.senderId)}`);
   };
 
-  const handleMouseEnter = () => {
-    if (timerRef.current) clearTimeout(timerRef.current);
+  // Alert handlers
+  const handleDismissAlert = () => {
+    if (alert) dismissedAlertsRef.current.add(alert.id);
+    setIsAlertVisible(false);
+    if (alertTimerRef.current) clearTimeout(alertTimerRef.current);
   };
 
-  const handleMouseLeave = () => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => {
-      setIsVisible(false);
-    }, 3500);
+  const handleReviewAlert = () => {
+    if (alert) dismissedAlertsRef.current.add(alert.id);
+    setIsAlertVisible(false);
+    router.push("/alerts");
   };
 
-  if (!message) return null;
+  const handleAcknowledgeAlert = async () => {
+    if (!alert || isAcknowledging || isAcknowledged) return;
+    setIsAcknowledging(true);
+    try {
+      await acknowledgeAlertAction(alert.id);
+      dismissedAlertsRef.current.add(alert.id);
+      setIsAcknowledging(false);
+      setIsAcknowledged(true);
 
-  const initials = (message.senderName || "?")
-    .split(" ")
-    .map((w) => w[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
+      // Broadcast to other tabs
+      if (typeof BroadcastChannel !== "undefined") {
+        try {
+          const bc = new BroadcastChannel("ayusphere_alerts");
+          bc.postMessage({ type: "alert_acknowledged", id: alert.id });
+          bc.close();
+        } catch {
+          // ignore
+        }
+      }
 
-  const roleDisplay = ROLE_LABEL[message.senderRole] || message.senderRole;
-  const contentSnippet = message.body
-    ? message.body
-    : message.attachmentName
-      ? `Shared attachment: ${message.attachmentName}`
-      : "Sent a new message";
+      // Brief reassurance before closing toast
+      setTimeout(() => {
+        setIsAlertVisible(false);
+      }, 500);
+    } catch {
+      setIsAcknowledging(false);
+    }
+  };
+
+  if (!isMessageVisible && !isAlertVisible) return null;
 
   return (
-    <aside
+    <div
       aria-live="polite"
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      className={cn(
-        "fixed right-4 top-16 z-50 w-84 max-w-[calc(100vw-32px)] md:right-6 md:w-92",
-        "rounded-2xl border border-line bg-surface p-4 shadow-xl transition-all duration-350 ease-[cubic-bezier(0.16,1,0.3,1)]",
-        isVisible
-          ? "translate-x-0 opacity-100 scale-100 pointer-events-auto"
-          : "translate-x-10 opacity-0 scale-95 pointer-events-none",
-      )}
+      className="fixed right-4 top-16 z-50 flex flex-col gap-3 pointer-events-none w-84 max-w-[calc(100vw-32px)] md:right-6 md:w-92"
     >
-      <button
-        type="button"
-        onClick={handleDismiss}
-        aria-label="Dismiss notification"
-        className="absolute right-3 top-3 cursor-pointer rounded-lg p-1 text-ink/40 transition-colors duration-150 hover:bg-primary-soft hover:text-ink"
-      >
-        <X className="h-4 w-4" />
-      </button>
+      {/* Alert Notification Card */}
+      {alert && isAlertVisible && (
+        <aside
+          onMouseEnter={() => {
+            if (alertTimerRef.current) clearTimeout(alertTimerRef.current);
+          }}
+          onMouseLeave={() => {
+            if (alertTimerRef.current) clearTimeout(alertTimerRef.current);
+            alertTimerRef.current = setTimeout(() => {
+              setIsAlertVisible(false);
+            }, 4000);
+          }}
+          className={cn(
+            "relative rounded-2xl border p-4 shadow-xl transition-all duration-350 ease-[cubic-bezier(0.16,1,0.3,1)] pointer-events-auto",
+            alert.severity === "danger"
+              ? "border-danger/30 bg-surface shadow-danger/5"
+              : "border-warning/30 bg-surface shadow-warning/5",
+            isAcknowledged && "!border-primary/40 bg-primary-soft/40",
+          )}
+        >
+          <button
+            type="button"
+            onClick={handleDismissAlert}
+            aria-label="Dismiss alert"
+            className="absolute right-3 top-3 cursor-pointer rounded-lg p-1 text-ink/40 transition-colors duration-150 hover:bg-primary-soft hover:text-ink"
+          >
+            <X className="h-4 w-4" />
+          </button>
 
-      <div className="flex gap-3">
-        {/* Sender Avatar */}
-        <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft font-bold text-primary">
-          {initials}
-          <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-surface bg-emerald-500" />
-        </div>
-
-        {/* Message Details */}
-        <div className="min-w-0 flex-1 pr-3">
-          <div className="flex items-center justify-between gap-1">
-            <h4 className="truncate text-body font-bold text-ink">
-              {message.senderName}
-            </h4>
-          </div>
-          <p className="truncate text-[11.5px] font-medium text-ink/60">
-            {roleDisplay}
-          </p>
-
-          <p className="mt-1 line-clamp-2 text-[13px] leading-snug text-ink/80">
-            {contentSnippet}
-          </p>
-
-          {/* Action buttons */}
-          <div className="mt-3 flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="primary"
-              onClick={handleReply}
-              className="h-7 px-3 text-[12px] font-semibold"
+          <div className="flex gap-3">
+            {/* Severity Icon */}
+            <div
+              className={cn(
+                "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
+                alert.severity === "danger"
+                  ? "bg-danger/10 text-danger"
+                  : "bg-warning/10 text-warning",
+              )}
             >
-              Reply
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={handleDismiss}
-              className="h-7 px-2.5 text-[12px] text-ink/60 hover:text-ink"
-            >
-              Dismiss
-            </Button>
+              <AlertTriangle className="h-5 w-5" />
+            </div>
+
+            {/* Alert Details */}
+            <div className="min-w-0 flex-1 pr-3">
+              <div className="flex items-center gap-2">
+                <Badge
+                  tone={
+                    alert.severity === "danger"
+                      ? "danger"
+                      : alert.severity === "warning"
+                        ? "warning"
+                        : "info"
+                  }
+                >
+                  {alert.severity === "danger" ? "Critical" : "Warning"}
+                </Badge>
+                <span className="truncate text-body font-bold text-ink">
+                  {alert.ruleKey.replace(/_/g, " ")}
+                </span>
+              </div>
+
+              <p className="mt-1 line-clamp-2 text-body leading-snug text-ink/80">
+                {alert.message}
+              </p>
+
+              {/* Action buttons */}
+              <div className="mt-3 flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="primary"
+                  onClick={handleReviewAlert}
+                  className="h-7 px-3 font-semibold"
+                >
+                  Review
+                </Button>
+                <Button
+                  size="sm"
+                  variant={isAcknowledged ? "primary" : "outline"}
+                  disabled={isAcknowledging || isAcknowledged}
+                  onClick={handleAcknowledgeAlert}
+                  className={cn(
+                    "h-7 px-2.5 font-semibold transition-all duration-200",
+                    isAcknowledged &&
+                      "!opacity-100 pointer-events-none bg-primary text-white border-primary",
+                  )}
+                >
+                  {isAcknowledging ? (
+                    <span className="flex items-center gap-1">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Saving...
+                    </span>
+                  ) : isAcknowledged ? (
+                    "Acknowledged"
+                  ) : (
+                    "Acknowledge"
+                  )}
+                </Button>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-    </aside>
+        </aside>
+      )}
+
+      {/* Message Notification Card */}
+      {message && isMessageVisible && (
+        <aside
+          onMouseEnter={() => {
+            if (messageTimerRef.current) clearTimeout(messageTimerRef.current);
+          }}
+          onMouseLeave={() => {
+            if (messageTimerRef.current) clearTimeout(messageTimerRef.current);
+            messageTimerRef.current = setTimeout(() => {
+              setIsMessageVisible(false);
+            }, 3500);
+          }}
+          className="relative rounded-2xl border border-line bg-surface p-4 shadow-xl transition-all duration-350 ease-[cubic-bezier(0.16,1,0.3,1)] pointer-events-auto"
+        >
+          <button
+            type="button"
+            onClick={handleDismissMessage}
+            aria-label="Dismiss message notification"
+            className="absolute right-3 top-3 cursor-pointer rounded-lg p-1 text-ink/40 transition-colors duration-150 hover:bg-primary-soft hover:text-ink"
+          >
+            <X className="h-4 w-4" />
+          </button>
+
+          <div className="flex gap-3">
+            {/* Sender Avatar */}
+            <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft font-bold text-primary">
+              {(message.senderName || "?")
+                .split(" ")
+                .map((w) => w[0])
+                .slice(0, 2)
+                .join("")
+                .toUpperCase()}
+              <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-surface bg-emerald-500" />
+            </div>
+
+            {/* Message Details */}
+            <div className="min-w-0 flex-1 pr-3">
+              <h4 className="truncate text-body font-bold text-ink">
+                {message.senderName}
+              </h4>
+              <p className="truncate font-medium opacity-60">
+                {ROLE_LABEL[message.senderRole] || message.senderRole}
+              </p>
+
+              <p className="mt-1 line-clamp-2 text-body leading-snug text-ink/80">
+                {message.body
+                  ? message.body
+                  : message.attachmentName
+                    ? `Shared attachment: ${message.attachmentName}`
+                    : "Sent a new message"}
+              </p>
+
+              {/* Action buttons */}
+              <div className="mt-3 flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="primary"
+                  onClick={handleReplyMessage}
+                  className="h-7 px-3 font-semibold"
+                >
+                  Reply
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleDismissMessage}
+                  className="h-7 px-2.5 opacity-60 hover:opacity-100"
+                >
+                  Dismiss
+                </Button>
+              </div>
+            </div>
+          </div>
+        </aside>
+      )}
+    </div>
   );
 }
 
-export function MessageToast() {
+export function NotificationToast(props: NotificationToastProps) {
   return (
     <Suspense fallback={null}>
-      <MessageToastInner />
+      <NotificationToastInner {...props} />
     </Suspense>
   );
+}
+
+// Retain backwards-compatible export
+export function MessageToast(props: NotificationToastProps) {
+  return <NotificationToast {...props} />;
 }

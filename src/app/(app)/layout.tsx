@@ -175,7 +175,12 @@ export default async function AppLayout({
         <main className="flex-1 px-4 py-6 md:px-6">{children}</main>
       </div>
       <GuideWidget userName={user.name ?? "there"} />
-      {can(user.role, "chat.use") ? <MessageToast /> : null}
+      {can(user.role, "chat.use") || can(user.role, "alert.acknowledge") ? (
+        <MessageToast
+          canChat={can(user.role, "chat.use")}
+          canAlerts={can(user.role, "alert.acknowledge")}
+        />
+      ) : null}
     </div>
   );
 }
