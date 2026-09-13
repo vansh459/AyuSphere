@@ -201,7 +201,9 @@ export function Sidebar({
                 {count > 0 ? (
                   <span
                     className={cn(
-                      "flex h-[18px] min-w-[18px] shrink-0 items-center justify-center rounded-full px-1.5 text-[11px] font-bold leading-none shadow-xs",
+                      // D-008: no third font size — body size in a h-5 pill,
+                      // matching the topbar bell badge
+                      "flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 font-bold leading-none shadow-xs",
                       active
                         ? "bg-primary-deep text-white"
                         : "bg-white/20 text-white",

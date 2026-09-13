@@ -23,7 +23,7 @@ const componentFiles = files.filter((f) => /\.tsx?$/.test(f));
 
 /** Tailwind's default text-size utilities — none may exist (D-008) */
 const FORBIDDEN_TEXT_SIZES =
-  /\btext-(xs|sm|base|lg|xl|2xl|3xl|4xl|5xl|6xl|7xl|8xl|9xl)\b/;
+  /\btext-(xs|sm|base|lg|xl|2xl|3xl|4xl|5xl|6xl|7xl|8xl|9xl)\b|text-\[\d/;
 
 describe("T4.4 — one font, two sizes, everywhere", () => {
   it("no file uses a forbidden Tailwind text-size class", () => {

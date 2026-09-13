@@ -4,5 +4,8 @@
       "path": "/api/cron/alerts",
       "schedule": "23 3 * * *"
     }
+  ],
+  "regions": [
+    "iad1"
   ]
 }
