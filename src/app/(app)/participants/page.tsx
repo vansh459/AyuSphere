@@ -38,7 +38,7 @@ export default async function ParticipantsPage(props: {
   let dbError = false;
   try {
     const db = getDb();
-    rows = await db
+    const rowsQuery = db
       .select({
         p: participants,
         protocolCode: trials.protocolCode,
@@ -49,10 +49,6 @@ export default async function ParticipantsPage(props: {
       .innerJoin(trials, eq(trialSites.trialId, trials.id))
       .innerJoin(sites, eq(trialSites.siteId, sites.id))
       .orderBy(participants.subjectCode);
-    protocolCodes = [...new Set(rows.map((r) => r.protocolCode))].sort();
-    if (trialFilter) {
-      rows = rows.filter((r) => r.protocolCode === trialFilter);
-    }
     const ts = await db
       .select({
         id: trialSites.id,
@@ -64,6 +60,11 @@ export default async function ParticipantsPage(props: {
       .innerJoin(trials, eq(trialSites.trialId, trials.id))
       .innerJoin(sites, eq(trialSites.siteId, sites.id))
       .where(eq(trialSites.activationStatus, "active"));
+    rows = await rowsQuery;
+    protocolCodes = [...new Set(rows.map((r) => r.protocolCode))].sort();
+    if (trialFilter) {
+      rows = rows.filter((r) => r.protocolCode === trialFilter);
+    }
     activeSites = ts.map((t) => ({
       id: t.id,
       label: `${t.protocolCode} · ${t.siteName}`,

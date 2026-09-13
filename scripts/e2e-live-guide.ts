@@ -56,7 +56,7 @@ async function main() {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   const consoleErrors: string[] = [];
-  page.on("console", (msg) => {
+  page.on("console", (msg: { type: () => string; text: () => string }) => {
     if (msg.type() === "error") consoleErrors.push(msg.text());
   });
 

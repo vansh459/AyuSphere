@@ -50,7 +50,7 @@ export function TermPicker({
         const bp = b.value.toLowerCase().startsWith(q) ? 0 : 1;
         return ap - bp || a.value.localeCompare(b.value);
       })
-      .slice(0, 8);
+      .slice(0, 100); // full dictionary visible; list scrolls
   }, [value, options]);
 
   useEffect(() => {
