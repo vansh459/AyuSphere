@@ -135,3 +135,24 @@
   font-weight: 500;
   opacity: 0.7;
 }
+
+@utility topbar-bell-badge {
+  font-size: 11px;
+  line-height: 1;
+  height: 18px;
+  min-width: 18px;
+  padding: 0 5px;
+  border: 2px solid var(--color-surface, #ffffff);
+  font-weight: 700;
+  transform: translate(45%, -35%);
+}
+
+@utility sidebar-count-badge {
+  font-size: 11px;
+  line-height: 1;
+  height: 18px;
+  min-width: 18px;
+  padding: 0 6px;
+  font-weight: 700;
+}
+

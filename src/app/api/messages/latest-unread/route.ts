@@ -6,6 +6,8 @@ import { getDb } from "@/db";
 import { messages, users } from "@/db/schema";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export async function GET() {
   const session = await auth();
@@ -39,7 +41,14 @@ export async function GET() {
       .orderBy(desc(messages.createdAt))
       .limit(1);
 
-    return NextResponse.json({ message: latest ?? null });
+    return NextResponse.json(
+      { message: latest ?? null },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+        },
+      },
+    );
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "failed to fetch latest unread" },

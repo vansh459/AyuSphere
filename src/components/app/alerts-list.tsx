@@ -23,16 +23,9 @@ interface AlertsListProps {
 
 export function AlertsList({ initialAlerts }: AlertsListProps) {
   const [alertList, setAlertList] = useState<AlertItem[]>(initialAlerts);
-  const [prevInitialAlerts, setPrevInitialAlerts] = useState<AlertItem[]>(initialAlerts);
   const [submittingIds, setSubmittingIds] = useState<Record<string, boolean>>({});
   const [confirmedIds, setConfirmedIds] = useState<Record<string, boolean>>({});
   const [collapsingIds, setCollapsingIds] = useState<Record<string, boolean>>({});
-
-  // Sync state if initialAlerts updates from server
-  if (initialAlerts !== prevInitialAlerts) {
-    setPrevInitialAlerts(initialAlerts);
-    setAlertList(initialAlerts);
-  }
 
   async function handleAcknowledge(id: string) {
     if (submittingIds[id] || confirmedIds[id]) return;

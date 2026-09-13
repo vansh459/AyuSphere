@@ -39,7 +39,10 @@ function MessageToastInner() {
 
   const checkUnread = async () => {
     try {
-      const res = await fetch("/api/messages/latest-unread");
+      const res = await fetch("/api/messages/latest-unread", {
+        cache: "no-store",
+        headers: { "Cache-Control": "no-cache" },
+      });
       if (!res.ok) return;
       const data = await res.json();
       const unread: UnreadMessage | null = data.message;
@@ -69,8 +72,8 @@ function MessageToastInner() {
     // Immediate check on mount (0ms delay)
     checkUnread();
 
-    // Fast polling every 3 seconds for snappy notification
-    const interval = setInterval(checkUnread, 3000);
+    // Fast polling every 1.2 seconds for ultra-responsive notification
+    const interval = setInterval(checkUnread, 1200);
 
     const onFocus = () => {
       checkUnread();
@@ -78,11 +81,24 @@ function MessageToastInner() {
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onFocus);
 
+    let bc: BroadcastChannel | null = null;
+    if (typeof BroadcastChannel !== "undefined") {
+      try {
+        bc = new BroadcastChannel("ayusphere_messages");
+        bc.onmessage = () => {
+          checkUnread();
+        };
+      } catch {
+        // ignore
+      }
+    }
+
     return () => {
       clearInterval(interval);
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onFocus);
       if (timerRef.current) clearTimeout(timerRef.current);
+      if (bc) bc.close();
     };
   }, [pathname, activeWith]);
 

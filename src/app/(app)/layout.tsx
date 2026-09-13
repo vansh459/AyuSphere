@@ -127,13 +127,13 @@ export default async function AppLayout({
             {can(user.role, "alert.acknowledge") ? (
               <Link
                 href="/alerts"
-                className="relative flex h-10 w-10 items-center justify-center rounded-xl text-ink transition-colors duration-200 hover:bg-primary-soft"
+                className="flex h-10 w-10 items-center justify-center rounded-xl text-ink transition-colors duration-200 hover:bg-primary-soft"
                 aria-label={`Alerts (${openAlerts} open)`}
               >
                 <span className="relative inline-flex items-center justify-center">
                   <Bell className="h-5 w-5 text-ink" />
                   {openAlerts > 0 ? (
-                    <span className="pointer-events-none absolute -right-2.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-danger px-1 font-bold leading-none text-white ring-2 ring-surface shadow-xs">
+                    <span className="pointer-events-none absolute right-0 top-0 flex items-center justify-center rounded-full bg-danger text-white shadow-xs topbar-bell-badge">
                       {openAlerts > 9 ? "9+" : openAlerts}
                     </span>
                   ) : null}

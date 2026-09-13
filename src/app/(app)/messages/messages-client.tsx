@@ -220,6 +220,15 @@ export function MessagesClient({
       setDraft("");
       setFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
+      if (typeof BroadcastChannel !== "undefined") {
+        try {
+          const bc = new BroadcastChannel("ayusphere_messages");
+          bc.postMessage({ type: "new_message" });
+          bc.close();
+        } catch {
+          // ignore
+        }
+      }
       void refresh(active.id);
     } catch (e) {
       setError(e instanceof Error ? e.message : "send failed");
