@@ -9,6 +9,7 @@ import {
   attachSiteToTrial,
   createSite,
 } from "@/services/sites";
+import { fmtDate } from "@/lib/dates";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
@@ -193,7 +194,7 @@ export default async function SitesPage(props: {
                     </form>
                   ) : ts.activatedAt ? (
                     <span className="opacity-50">
-                      since {ts.activatedAt.toLocaleDateString()}
+                      since {fmtDate(ts.activatedAt)}
                     </span>
                   ) : null}
                 </div>

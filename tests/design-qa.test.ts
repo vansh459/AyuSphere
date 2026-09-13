@@ -63,6 +63,23 @@ describe("T4.4 — one font, two sizes, everywhere", () => {
   });
 });
 
+describe("T6.7 — timezone-safe date rendering", () => {
+  it("every toLocale*String call passes APP_LOCALE (bare calls format in the server's UTC)", () => {
+    // Vercel functions run with TZ=UTC: a bare toLocaleDateString() renders
+    // the UTC date, shifting IST users back a day between 00:00–05:29 IST.
+    // All formatting must go through src/lib/dates.ts or pass APP_LOCALE
+    // with an explicit timeZone.
+    const offenders: string[] = [];
+    for (const f of componentFiles) {
+      if (/lib[\\/]dates\.ts$/.test(f)) continue; // the helper module itself
+      const content = readFileSync(f, "utf8");
+      const m = content.match(/toLocale(?:Date|Time)?String\((?!APP_LOCALE)/);
+      if (m) offenders.push(`${path.relative(SRC, f)} → ${m[0]}`);
+    }
+    expect(offenders, offenders.join("; ")).toHaveLength(0);
+  });
+});
+
 describe("T4.4 — surfaces defined once (D-007)", () => {
   it("backdrop-blur exists ONLY in globals.css (.glass), never hand-rolled in components", () => {
     const offenders: string[] = [];

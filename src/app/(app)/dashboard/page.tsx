@@ -18,6 +18,7 @@ import {
 import { auth } from "@/lib/auth";
 import { can } from "@/lib/rbac";
 import { dashboardVariant, type DashboardCard } from "@/lib/dashboard-variants";
+import { fmtDate } from "@/lib/dates";
 import { getDb } from "@/db";
 import { participants, trials, visits } from "@/db/schema";
 import {
@@ -504,7 +505,7 @@ export default async function DashboardPage() {
                     {s.monitoringVisitDue ? (
                       <Badge tone={overdue ? "danger" : "success"}>
                         {overdue ? "overdue since " : "due "}
-                        {s.monitoringVisitDue.toLocaleDateString()}
+                        {fmtDate(s.monitoringVisitDue)}
                       </Badge>
                     ) : (
                       <Badge tone="neutral">not scheduled</Badge>

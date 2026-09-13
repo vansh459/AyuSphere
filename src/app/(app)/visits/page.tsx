@@ -4,6 +4,7 @@ import { requireActor } from "@/lib/actor";
 import { getDb } from "@/db";
 import { participants, visits } from "@/db/schema";
 import { refreshVisitStatuses } from "@/services/visits";
+import { fmtDate } from "@/lib/dates";
 import { Card } from "@/components/ui/card";
 import {
   DbErrorState,
@@ -74,9 +75,9 @@ export default async function VisitsPage(props: {
                       <StatusBadge status={v.status} />
                     </div>
                     <p className="opacity-50">
-                      window {v.windowStart.toLocaleDateString()} –{" "}
-                      {v.windowEnd.toLocaleDateString()} · scheduled{" "}
-                      {v.scheduledDate.toLocaleDateString()}
+                      window {fmtDate(v.windowStart)} –{" "}
+                      {fmtDate(v.windowEnd)} · scheduled{" "}
+                      {fmtDate(v.scheduledDate)}
                     </p>
                   </Card>
                 </Link>

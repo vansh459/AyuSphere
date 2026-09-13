@@ -5,6 +5,7 @@ import { eq, inArray } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { requireActor, withError } from "@/lib/actor";
 import { can } from "@/lib/rbac";
+import { fmtDate } from "@/lib/dates";
 import { getDb } from "@/db";
 import { participants, trialSites, trials } from "@/db/schema";
 import Link from "next/link";
@@ -460,7 +461,7 @@ export default async function AdverseEventsPage(props: {
                     <Badge tone="info">{ae.status.replace("_", " ")}</Badge>
                   </div>
                   <p className="mt-1 opacity-70">
-                    {subjectCode} · onset {ae.onsetDate.toLocaleDateString()}
+                    {subjectCode} · onset {fmtDate(ae.onsetDate)}
                     {ae.causality ? ` · causality: ${ae.causality}` : ""}
                   </p>
                   {meddra || whodrug ? (
@@ -649,7 +650,7 @@ export default async function AdverseEventsPage(props: {
                       </Badge>
                       <span className="opacity-50">
                         {adr.suspectedDrug} · {adr.source} ·{" "}
-                        {adr.eventDate.toLocaleDateString()}
+                        {fmtDate(adr.eventDate)}
                       </span>
                     </div>
                     {meddra ? (

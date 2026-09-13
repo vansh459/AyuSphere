@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Paperclip, Send, X } from "lucide-react";
 import { fadeRise } from "@/lib/motion";
+import { APP_LOCALE, APP_TZ } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 import { refreshBadges } from "@/components/app/live-badges";
 import { DocPreview } from "@/components/app/doc-preview";
@@ -45,10 +46,17 @@ const ROLE_LABEL: Record<string, string> = {
 function timeLabel(iso: string): string {
   const d = new Date(iso);
   const now = new Date();
-  const sameDay = d.toDateString() === now.toDateString();
+  const dayKey = (x: Date) =>
+    x.toLocaleDateString(APP_LOCALE, { timeZone: APP_TZ });
+  const sameDay = dayKey(d) === dayKey(now);
   return sameDay
-    ? d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-    : d.toLocaleString([], {
+    ? d.toLocaleTimeString(APP_LOCALE, {
+        timeZone: APP_TZ,
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : d.toLocaleString(APP_LOCALE, {
+        timeZone: APP_TZ,
         day: "numeric",
         month: "short",
         hour: "2-digit",

@@ -145,7 +145,9 @@ export async function listMonitoringVisits(db: Db, limit = 50) {
     .innerJoin(trialSites, eq(monitoringVisits.trialSiteId, trialSites.id))
     .innerJoin(trials, eq(trialSites.trialId, trials.id))
     .innerJoin(sites, eq(trialSites.siteId, sites.id))
-    .orderBy(desc(monitoringVisits.scheduledDate))
+    // newest-created first: a just-scheduled visit is always the top card,
+    // so the monitor completes the visit they actually created
+    .orderBy(desc(monitoringVisits.createdAt))
     .limit(limit);
 }
 

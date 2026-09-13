@@ -3,6 +3,7 @@ import { desc, eq } from "drizzle-orm";
 import { requireActor } from "@/lib/actor";
 import { getDb } from "@/db";
 import { extractions, participants, visits } from "@/db/schema";
+import { fmtDate, fmtDateTime } from "@/lib/dates";
 import { Card } from "@/components/ui/card";
 import { DocPreview } from "@/components/app/doc-preview";
 import {
@@ -89,8 +90,8 @@ export default async function ExtractionsPage() {
                   {e.modelId ? ` · ${e.modelId}` : ""}
                 </p>
                 <p className="opacity-50">
-                  {e.createdAt.toLocaleString()}
-                  {e.reviewedAt ? ` · reviewed ${e.reviewedAt.toLocaleDateString()}` : ""}
+                  {fmtDateTime(e.createdAt)}
+                  {e.reviewedAt ? ` · reviewed ${fmtDate(e.reviewedAt)}` : ""}
                 </p>
                 <Link href={`/visits/${visitId}`} className="font-medium text-primary">
                   Open visit & entries →

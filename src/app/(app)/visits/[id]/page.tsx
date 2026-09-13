@@ -8,6 +8,7 @@ import { can } from "@/lib/rbac";
 import { getDb } from "@/db";
 import { crfEntries, crfTemplates, participants, visits } from "@/db/schema";
 import { parseTemplateFields, type CrfField } from "@/lib/crf";
+import { fmtDate, fmtDateTime } from "@/lib/dates";
 import { approveEntry, createDraftEntry, submitEntry } from "@/services/crf";
 import { answerQuery, queriesForEntries } from "@/services/data-queries";
 import { signaturesFor, SIGNATURE_MEANINGS } from "@/services/signatures";
@@ -150,7 +151,7 @@ export default async function VisitDetailPage(props: {
       <BackLink href="/visits" label="Visit Schedule" />
       <PageHeader
         title={`${row.subjectCode} — ${row.visit.name}`}
-        subtitle={`Window ${row.visit.windowStart.toLocaleDateString()} – ${row.visit.windowEnd.toLocaleDateString()}`}
+        subtitle={`Window ${fmtDate(row.visit.windowStart)} – ${fmtDate(row.visit.windowEnd)}`}
         action={<StatusBadge status={row.visit.status} />}
       />
       <ErrorBanner message={typeof sp.error === "string" ? sp.error : undefined} />
@@ -231,7 +232,7 @@ export default async function VisitDetailPage(props: {
                   ) : null}
                   <span className="opacity-50">
                     v{e.version} · {e.source} ·{" "}
-                    {e.createdAt.toLocaleString()}
+                    {fmtDateTime(e.createdAt)}
                   </span>
                 </div>
                 <p className="mt-1 break-all opacity-70">

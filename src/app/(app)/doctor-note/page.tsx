@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { eq, inArray } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { can } from "@/lib/rbac";
+import { fmtDate } from "@/lib/dates";
 import { getDb } from "@/db";
 import { participants, visits } from "@/db/schema";
 import { Card } from "@/components/ui/card";
@@ -30,7 +31,7 @@ export default async function DoctorNotePage() {
       .limit(300);
     options = rows.map((r) => ({
       id: r.id,
-      label: `${r.subjectCode} · ${r.name} · ${r.scheduledDate.toLocaleDateString()}`,
+      label: `${r.subjectCode} · ${r.name} · ${fmtDate(r.scheduledDate)}`,
     }));
   } catch {
     dbError = true;

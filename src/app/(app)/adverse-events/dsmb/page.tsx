@@ -13,6 +13,7 @@ import {
   timelinessStats,
 } from "@/services/safety-signals";
 import { openAesByDeadline } from "@/services/kpi";
+import { fmtDateTime } from "@/lib/dates";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PrintButton } from "@/components/app/print-button";
@@ -49,7 +50,7 @@ export default async function DsmbSummaryPage() {
       </div>
       <PageHeader
         title="DSMB Safety Summary"
-        subtitle={`Aggregate portfolio safety for the Data Safety Monitoring Board and institutional leadership · generated ${new Date().toLocaleString("en-IN")}`}
+        subtitle={`Aggregate portfolio safety for the Data Safety Monitoring Board and institutional leadership · generated ${fmtDateTime(new Date())}`}
         action={<PrintButton label="Print DSMB summary" />}
       />
       <p className="opacity-70">
@@ -149,7 +150,7 @@ export default async function DsmbSummaryPage() {
                     <span className="opacity-50">{subjectCode}</span>
                   </div>
                   <p className="opacity-70">
-                    deadline {ae.reportingDeadline.toLocaleString("en-IN")}
+                    deadline {fmtDateTime(ae.reportingDeadline)}
                   </p>
                 </div>
               ))

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { clockBand } from "@/lib/rules/deadlines";
+import { fmtDateTime } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 
 const BAND_CLASS = {
@@ -56,7 +57,7 @@ export function EscalationClock({
         BAND_CLASS[band],
         band === "breached" && "animate-pulse",
       )}
-      title={`Reporting deadline ${target.toLocaleString()}`}
+      title={`Reporting deadline ${fmtDateTime(target)}`}
     >
       <svg width="40" height="40" viewBox="0 0 40 40" aria-hidden>
         <circle

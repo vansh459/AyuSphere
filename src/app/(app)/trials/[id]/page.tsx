@@ -16,6 +16,7 @@ import {
   visitCompliance,
 } from "@/services/kpi";
 import { analyzeRecruitment } from "@/lib/rules/recruitment";
+import { fmtDate } from "@/lib/dates";
 import type { TrialStatus } from "@/lib/rules/lifecycle";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -249,11 +250,11 @@ export default async function TrialDetailPage(props: {
               <p className="opacity-70">{m.kind.replaceAll("_", " ")}</p>
               {m.completedAt ? (
                 <Badge tone="success">
-                  done · {m.completedAt.toLocaleDateString()}
+                  done · {fmtDate(m.completedAt)}
                 </Badge>
               ) : m.dueDate ? (
                 <Badge tone="warning">
-                  due {m.dueDate.toLocaleDateString()}
+                  due {fmtDate(m.dueDate)}
                 </Badge>
               ) : (
                 <Badge>pending</Badge>
@@ -321,7 +322,7 @@ export default async function TrialDetailPage(props: {
                 {c.consentFormVersion !== null
                   ? `signed form v${c.consentFormVersion} of v${c.latestFormVersion ?? "?"}`
                   : "no form binding (legacy)"}
-                {c.consentDate ? ` · ${c.consentDate.toLocaleDateString()}` : ""}
+                {c.consentDate ? ` · ${fmtDate(c.consentDate)}` : ""}
               </p>
             </div>
           ))
@@ -393,10 +394,8 @@ export default async function TrialDetailPage(props: {
                   <p className="mt-1 opacity-70">IEC: {a.comment}</p>
                 ) : null}
                 <p className="mt-1 opacity-50">
-                  submitted {a.createdAt.toLocaleDateString()}
-                  {a.decidedAt
-                    ? ` · decided ${a.decidedAt.toLocaleDateString()}`
-                    : ""}
+                  submitted {fmtDate(a.createdAt)}
+                  {a.decidedAt ? ` · decided ${fmtDate(a.decidedAt)}` : ""}
                 </p>
               </div>
             </div>

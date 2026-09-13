@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { CalendarDays } from "lucide-react";
+import { APP_LOCALE, APP_TZ } from "@/lib/dates";
 
 export function LiveClock() {
   const [mounted, setMounted] = useState(false);
@@ -16,14 +17,16 @@ export function LiveClock() {
     return () => clearInterval(interval);
   }, []);
 
-  const dateStr = time.toLocaleDateString("en-IN", {
+  const dateStr = time.toLocaleDateString(APP_LOCALE, {
+    timeZone: APP_TZ,
     weekday: "long",
     day: "2-digit",
     month: "short",
     year: "numeric",
   });
 
-  const timeStr = time.toLocaleTimeString("en-IN", {
+  const timeStr = time.toLocaleTimeString(APP_LOCALE, {
+    timeZone: APP_TZ,
     hour: "2-digit",
     minute: "2-digit",
     hour12: true,

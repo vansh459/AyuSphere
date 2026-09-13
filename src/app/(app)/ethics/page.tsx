@@ -6,6 +6,7 @@ import { getDb } from "@/db";
 import { documents, trials } from "@/db/schema";
 import { transitionTrial } from "@/services/trials";
 import { decideAmendment, pendingAmendments } from "@/services/amendments";
+import { fmtDate } from "@/lib/dates";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -166,7 +167,7 @@ export default async function EthicsPage(props: {
                     <p className="mt-1 opacity-70">{amendment.summary}</p>
                     <p className="mt-1 opacity-50">
                       {trialTitle} · submitted{" "}
-                      {amendment.createdAt.toLocaleDateString()}
+                      {fmtDate(amendment.createdAt)}
                     </p>
                   </div>
                   <form

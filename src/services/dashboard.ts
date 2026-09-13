@@ -16,6 +16,7 @@ import {
   trials,
   visits,
 } from "@/db/schema";
+import { APP_LOCALE, APP_TZ } from "@/lib/dates";
 
 const DAY = 86_400_000;
 
@@ -77,7 +78,10 @@ export async function trialProgressSeries(db: Db): Promise<ProgressPoint[]> {
   const points: ProgressPoint[] = [];
   for (let i = 8; i >= 0; i--) {
     const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59);
-    const label = monthEnd.toLocaleString("en", { month: "short" });
+    const label = monthEnd.toLocaleString(APP_LOCALE, {
+      timeZone: APP_TZ,
+      month: "short",
+    });
     const upTo = (rows: { at: Date | null }[]) =>
       rows.filter((r) => r.at && r.at.getTime() <= monthEnd.getTime()).length;
     points.push({
@@ -293,7 +297,8 @@ export async function upcomingVisitList(db: Db, limit = 4): Promise<UpcomingVisi
       id: v.id,
       subjectCode,
       name: v.name,
-      date: v.scheduledDate.toLocaleDateString("en-IN", {
+      date: v.scheduledDate.toLocaleDateString(APP_LOCALE, {
+        timeZone: APP_TZ,
         day: "2-digit",
         month: "short",
         year: "numeric",

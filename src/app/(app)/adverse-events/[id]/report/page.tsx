@@ -8,6 +8,7 @@ import { auth } from "@/lib/auth";
 import { can } from "@/lib/rbac";
 import { getDb } from "@/db";
 import { AeReportError, assembleAeReport } from "@/services/ae-report";
+import { fmtDate, fmtDateTime } from "@/lib/dates";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PrintButton } from "@/components/app/print-button";
@@ -61,7 +62,7 @@ export default async function AeReportPage(props: {
       </div>
       <PageHeader
         title={`${ae.seriousness === "sae" ? "Serious Adverse Event" : "Adverse Event"} Report`}
-        subtitle={`CIOMS-style summary (representative demo layout) · generated ${new Date().toLocaleString("en-IN")} · case ${ae.id.slice(0, 8)}`}
+        subtitle={`CIOMS-style summary (representative demo layout) · generated ${fmtDateTime(new Date())} · case ${ae.id.slice(0, 8)}`}
         action={<PrintButton label="Print report" />}
       />
 
@@ -79,7 +80,7 @@ export default async function AeReportPage(props: {
         </div>
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
           <Field label="Subject (de-identified)" value={report.subjectCode} />
-          <Field label="Onset date" value={ae.onsetDate.toLocaleDateString("en-IN")} />
+          <Field label="Onset date" value={fmtDate(ae.onsetDate)} />
           <Field label="Severity" value={ae.severity} />
           <Field label="Verbatim term" value={ae.term} />
           <Field
@@ -143,15 +144,15 @@ export default async function AeReportPage(props: {
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
           <Field
             label="Initial report deadline"
-            value={ae.reportingDeadline.toLocaleString("en-IN")}
+            value={fmtDateTime(ae.reportingDeadline)}
           />
           <Field
             label="Detailed report deadline"
-            value={ae.detailedReportDeadline?.toLocaleString("en-IN") ?? "—"}
+            value={fmtDateTime(ae.detailedReportDeadline) || "—"}
           />
           <Field
             label="Reported at"
-            value={ae.reportedAt?.toLocaleString("en-IN") ?? "not yet reported"}
+            value={fmtDateTime(ae.reportedAt) || "not yet reported"}
           />
           <Field
             label="Deadline compliance"
@@ -174,7 +175,7 @@ export default async function AeReportPage(props: {
           <span className="microlabel">Escalation timeline (ae_actions)</span>
           {report.timeline.map((t, i) => (
             <div key={i} className="flex flex-wrap items-center gap-2">
-              <span className="opacity-50">{t.at.toLocaleString("en-IN")}</span>
+              <span className="opacity-50">{fmtDateTime(t.at)}</span>
               <span className="font-medium">
                 {ACTION_LABEL[t.action] ?? t.action}
               </span>

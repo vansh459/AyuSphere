@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { can } from "@/lib/rbac";
 import { getDb } from "@/db";
 import { getAuditTrail } from "@/services/audit-browser";
+import { fmtDateTime } from "@/lib/dates";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -92,7 +93,7 @@ export default async function AuditPage(props: {
               {rows.map((e) => (
                 <tr key={e.id} className="border-b border-line align-top">
                   <td className="whitespace-nowrap px-4 py-3 opacity-70">
-                    {e.at.toLocaleString()}
+                    {fmtDateTime(e.at)}
                   </td>
                   <td className="px-4 py-3">
                     <Badge>{e.actorRole}</Badge>

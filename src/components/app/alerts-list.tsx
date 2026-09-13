@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { fmtDateTime } from "@/lib/dates";
 import { acknowledgeAlertAction } from "@/app/(app)/alerts/actions";
 import type { alerts } from "@/db/schema";
 
@@ -109,7 +110,7 @@ export function AlertsList({ initialAlerts }: AlertsListProps) {
                     {a.message}
                   </p>
                   <p className="opacity-50">
-                    {a.ruleKey} · {new Date(a.createdAt).toLocaleString()}
+                    {a.ruleKey} · {fmtDateTime(new Date(a.createdAt))}
                   </p>
                 </div>
               </div>

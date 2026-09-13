@@ -5,6 +5,7 @@ import { requireActor, withError } from "@/lib/actor";
 import { getDb } from "@/db";
 import { documents, trials } from "@/db/schema";
 import { uploadDocument } from "@/services/documents";
+import { fmtDate } from "@/lib/dates";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
@@ -165,7 +166,7 @@ export default async function DocumentsPage(props: {
                   <div className="flex items-center gap-4">
                     <DocPreview url={d.blobUrl} name={d.title} />
                     <span className="opacity-50">
-                      {d.createdAt.toLocaleDateString()}
+                      {fmtDate(d.createdAt)}
                     </span>
                   </div>
                 </div>

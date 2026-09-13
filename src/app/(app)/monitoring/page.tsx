@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { eq, inArray } from "drizzle-orm";
 import { requireActor, withError } from "@/lib/actor";
+import { fmtDate } from "@/lib/dates";
 import { getDb } from "@/db";
 import { alerts, trials } from "@/db/schema";
 import { sitePerformance } from "@/services/kpi";
@@ -187,7 +188,7 @@ export default async function MonitoringPage(props: {
                     <option key={s.trialSiteId} value={s.trialSiteId}>
                       {s.protocolCode} · {s.siteName}
                       {s.monitoringVisitDue
-                        ? ` (due ${s.monitoringVisitDue.toLocaleDateString()})`
+                        ? ` (due ${fmtDate(s.monitoringVisitDue)})`
                         : ""}
                     </option>
                   ))}
@@ -218,9 +219,9 @@ export default async function MonitoringPage(props: {
                       {protocolCode} · {siteName}
                     </p>
                     <span className="opacity-50">
-                      {visit.scheduledDate.toLocaleDateString()}
+                      scheduled {fmtDate(visit.scheduledDate)}
                       {visit.completedAt
-                        ? ` · completed ${visit.completedAt.toLocaleDateString()}`
+                        ? ` · completed ${fmtDate(visit.completedAt)}`
                         : ""}
                     </span>
                   </div>
@@ -359,7 +360,7 @@ export default async function MonitoringPage(props: {
                     </div>
                     <p className="mt-1 opacity-50">
                       {subjectCode} · {visitName} ·{" "}
-                      {query.createdAt.toLocaleDateString()}
+                      {fmtDate(query.createdAt)}
                     </p>
                   </div>
                   {query.status !== "closed" ? (
