@@ -201,17 +201,11 @@ export function Sidebar({
                 {count > 0 ? (
                   <span
                     className={cn(
-                      "flex shrink-0 items-center justify-center rounded-full px-1.5 font-bold shadow-xs",
+                      "flex h-[18px] min-w-[18px] shrink-0 items-center justify-center rounded-full px-1.5 text-[11px] font-bold leading-none shadow-xs",
                       active
                         ? "bg-primary-deep text-white"
                         : "bg-white/20 text-white",
                     )}
-                    style={{
-                      fontSize: "11px",
-                      lineHeight: 1,
-                      height: "18px",
-                      minWidth: "18px",
-                    }}
                   >
                     {count > 9 ? "9+" : count}
                   </span>
