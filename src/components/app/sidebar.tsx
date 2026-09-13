@@ -197,13 +197,19 @@ export function Sidebar({
                 {count > 0 ? (
                   <span
                     className={cn(
-                      "flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full px-1.5 text-[10px] font-bold leading-none shadow-xs",
+                      "flex shrink-0 items-center justify-center rounded-full px-1.5 font-bold shadow-xs",
                       item.href === "/alerts"
                         ? "bg-danger text-white"
                         : active
                           ? "bg-primary-deep text-white"
                           : "bg-white/20 text-white",
                     )}
+                    style={{
+                      fontSize: "10px",
+                      lineHeight: 1,
+                      height: "16px",
+                      minWidth: "16px",
+                    }}
                   >
                     {count > 9 ? "9+" : count}
                   </span>

@@ -91,15 +91,27 @@ export default async function AppLayout({
             {can(user.role, "alert.acknowledge") ? (
               <Link
                 href="/alerts"
-                className="relative flex h-10 w-10 items-center justify-center rounded-xl transition-colors duration-200 hover:bg-primary-soft"
+                className="flex h-10 w-10 items-center justify-center rounded-xl transition-colors duration-200 hover:bg-primary-soft"
                 aria-label={`Alerts (${openAlerts} open)`}
               >
-                <Bell className="h-5 w-5 opacity-70" />
-                {openAlerts > 0 ? (
-                  <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-bold leading-none text-white ring-2 ring-surface shadow-xs">
-                    {openAlerts > 9 ? "9+" : openAlerts}
-                  </span>
-                ) : null}
+                <span className="relative inline-flex">
+                  <Bell className="h-5 w-5 opacity-70" />
+                  {openAlerts > 0 ? (
+                    <span
+                      className="absolute -right-2 -top-1.5 flex items-center justify-center rounded-full bg-danger px-1 text-white shadow-xs"
+                      style={{
+                        fontSize: "10px",
+                        lineHeight: 1,
+                        height: "16px",
+                        minWidth: "16px",
+                        border: "2px solid var(--color-surface, #ffffff)",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {openAlerts > 9 ? "9+" : openAlerts}
+                    </span>
+                  ) : null}
+                </span>
               </Link>
             ) : null}
 
