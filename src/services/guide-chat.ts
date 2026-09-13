@@ -113,7 +113,10 @@ export async function runGuideTurn(
   // error become an unhandled rejection
   completion.catch(() => {});
 
-  const stream = new ReadableStream<Uint8Array>({
+  // push-style stream (start + eager loop), then piped through an identity
+  // TransformStream — the old pull()-based stream stalled ~30s on Vercel
+  // (teammate finding, commit 774bf7b); both measures keep tokens flowing
+  const raw = new ReadableStream<Uint8Array>({
     async start(controller) {
       let full = "";
       try {
@@ -152,6 +155,7 @@ export async function runGuideTurn(
       }
     },
   });
+  const stream = raw.pipeThrough(new TransformStream<Uint8Array, Uint8Array>());
 
   return { stream, completion };
 }
