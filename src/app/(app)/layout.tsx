@@ -32,51 +32,64 @@ export default async function AppLayout({
   const { user } = session;
   const items = navForRole(user.role);
 
-  const db = getDb();
-  const [openAlertsRes, unreadMessagesRes, openAeRes, ethicsTrialsRes, ethicsAmendRes] =
-    await Promise.all([
-      can(user.role, "alert.acknowledge")
-        ? db
-            .select({ count: sql<number>`count(*)::int` })
-            .from(alerts)
-            .where(eq(alerts.status, "open"))
-            .catch(() => [{ count: 0 }])
-        : Promise.resolve([{ count: 0 }]),
-      can(user.role, "chat.use")
-        ? db
-            .select({ count: sql<number>`count(*)::int` })
-            .from(messages)
-            .where(and(eq(messages.recipientId, user.id), isNull(messages.readAt)))
-            .catch(() => [{ count: 0 }])
-        : Promise.resolve([{ count: 0 }]),
-      can(user.role, "ae.capture") || can(user.role, "ae.review")
-        ? db
-            .select({ count: sql<number>`count(*)::int` })
-            .from(adverseEvents)
-            .where(inArray(adverseEvents.status, ["open", "under_review"]))
-            .catch(() => [{ count: 0 }])
-        : Promise.resolve([{ count: 0 }]),
-      can(user.role, "trial.ethicsReview")
-        ? db
-            .select({ count: sql<number>`count(*)::int` })
-            .from(trials)
-            .where(eq(trials.status, "iec_review"))
-            .catch(() => [{ count: 0 }])
-        : Promise.resolve([{ count: 0 }]),
-      can(user.role, "trial.ethicsReview")
-        ? db
-            .select({ count: sql<number>`count(*)::int` })
-            .from(amendments)
-            .where(eq(amendments.status, "submitted"))
-            .catch(() => [{ count: 0 }])
-        : Promise.resolve([{ count: 0 }]),
-    ]);
+  let openAlerts = 0;
+  let unreadMessages = 0;
+  let openAdverseEvents = 0;
+  let pendingEthics = 0;
 
-  const openAlerts = openAlertsRes[0]?.count ?? 0;
-  const unreadMessages = unreadMessagesRes[0]?.count ?? 0;
-  const openAdverseEvents = openAeRes[0]?.count ?? 0;
-  const pendingEthics =
-    (ethicsTrialsRes[0]?.count ?? 0) + (ethicsAmendRes[0]?.count ?? 0);
+  try {
+    const db = getDb();
+    const [openAlertsRes, unreadMessagesRes, openAeRes, ethicsTrialsRes, ethicsAmendRes] =
+      await Promise.all([
+        can(user.role, "alert.acknowledge")
+          ? db
+              .select({ count: sql<number>`count(*)::int` })
+              .from(alerts)
+              .where(eq(alerts.status, "open"))
+              .catch(() => [{ count: 0 }])
+          : Promise.resolve([{ count: 0 }]),
+        can(user.role, "chat.use")
+          ? db
+              .select({ count: sql<number>`count(*)::int` })
+              .from(messages)
+              .where(and(eq(messages.recipientId, user.id), isNull(messages.readAt)))
+              .catch(() => [{ count: 0 }])
+          : Promise.resolve([{ count: 0 }]),
+        can(user.role, "ae.capture") || can(user.role, "ae.review")
+          ? db
+              .select({ count: sql<number>`count(*)::int` })
+              .from(adverseEvents)
+              .where(inArray(adverseEvents.status, ["open", "under_review"]))
+              .catch(() => [{ count: 0 }])
+          : Promise.resolve([{ count: 0 }]),
+        can(user.role, "trial.ethicsReview")
+          ? db
+              .select({ count: sql<number>`count(*)::int` })
+              .from(trials)
+              .where(eq(trials.status, "iec_review"))
+              .catch(() => [{ count: 0 }])
+          : Promise.resolve([{ count: 0 }]),
+        can(user.role, "trial.ethicsReview")
+          ? db
+              .select({ count: sql<number>`count(*)::int` })
+              .from(amendments)
+              .where(eq(amendments.status, "submitted"))
+              .catch(() => [{ count: 0 }])
+          : Promise.resolve([{ count: 0 }]),
+      ]);
+
+    openAlerts = Number(openAlertsRes[0]?.count ?? 0);
+    unreadMessages = Number(unreadMessagesRes[0]?.count ?? 0);
+    openAdverseEvents = Number(openAeRes[0]?.count ?? 0);
+    pendingEthics =
+      Number(ethicsTrialsRes[0]?.count ?? 0) +
+      Number(ethicsAmendRes[0]?.count ?? 0);
+  } catch {
+    openAlerts = 0;
+    unreadMessages = 0;
+    openAdverseEvents = 0;
+    pendingEthics = 0;
+  }
 
   const initials = (user.name ?? "?")
     .split(" ")

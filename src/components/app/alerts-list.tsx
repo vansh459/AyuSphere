@@ -27,6 +27,11 @@ export function AlertsList({ initialAlerts }: AlertsListProps) {
   const [confirmedIds, setConfirmedIds] = useState<Record<string, boolean>>({});
   const [collapsingIds, setCollapsingIds] = useState<Record<string, boolean>>({});
 
+  // Sync state if initialAlerts updates from server
+  useEffect(() => {
+    setAlertList(initialAlerts);
+  }, [initialAlerts]);
+
   async function handleAcknowledge(id: string) {
     if (submittingIds[id] || confirmedIds[id]) return;
 
