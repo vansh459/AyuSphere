@@ -5,7 +5,6 @@ import {
   AlertTriangle,
   BadgeCheck,
   Calendar,
-  CalendarDays,
   FileText,
   FlaskConical,
   Landmark,
@@ -48,6 +47,7 @@ import {
   AssistantPanel,
   type VisitOption,
 } from "@/components/app/assistant-panel";
+import { LiveClock } from "@/components/app/live-clock";
 
 const ACTIVITY_ICON: Record<string, React.ComponentType<{ className?: string }>> = {
   participant: UserPlus,
@@ -72,7 +72,6 @@ const INSIGHT_ICON = {
 export default async function DashboardPage() {
   const session = await auth();
   const user = session!.user;
-  const now = new Date();
   // tailored dashboards (T10.5): the role decides which cards compose
   const cards = dashboardVariant(user.role);
   const show = (c: DashboardCard) => cards.includes(c);
@@ -261,25 +260,7 @@ export default async function DashboardPage() {
               Ayurveda clinical trials
             </p>
           </div>
-          <div className="clay flex items-center gap-3 px-4 py-2.5">
-            <CalendarDays className="h-5 w-5 text-primary" />
-            <div>
-              <p className="font-bold leading-tight">
-                {now.toLocaleDateString("en-IN", {
-                  weekday: "long",
-                  day: "2-digit",
-                  month: "short",
-                  year: "numeric",
-                })}
-              </p>
-              <p className="leading-tight opacity-50">
-                {now.toLocaleTimeString("en-IN", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </p>
-            </div>
-          </div>
+          <LiveClock />
         </div>
 
         {/* stat cards */}
