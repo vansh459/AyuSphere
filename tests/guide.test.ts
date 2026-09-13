@@ -192,7 +192,16 @@ describe("Sphera — guide settings service", () => {
     vi.stubEnv("GROQ_API_KEY", "env-groq-key");
     expect(await getGuideConfig(db2)).toMatchObject({ apiKey: "env-groq-key" });
     vi.stubEnv("GROQ_API_KEY", "");
+    vi.stubEnv("GROQ_API", "");
     expect(await getGuideConfig(db2)).toBeNull();
+    // GROQ_API is accepted as an alias (real-world .env naming, 2026-09-13)
+    vi.stubEnv("GROQ_API", "alias-groq-key");
+    expect(await getGuideConfig(db2)).toMatchObject({ apiKey: "alias-groq-key" });
+    expect(await getGuideSettingsView(db2)).toMatchObject({
+      keySet: true,
+      source: "env",
+    });
+    vi.stubEnv("GROQ_API", "");
     // settings row (from db above) wins over env
     vi.stubEnv("GROQ_API_KEY", "env-groq-key");
     const cfg = await getGuideConfig(db);

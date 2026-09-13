@@ -146,6 +146,15 @@ export const guideConfigSchema = z.object({
 
 export type GuideConfig = z.infer<typeof guideConfigSchema>;
 
+/**
+ * Env fallback key: canonical GROQ_API_KEY, with GROQ_API accepted as an
+ * alias (teams keep writing the shorter name — a silent mismatch left the
+ * guide "unconfigured" even though a valid key sat in .env).
+ */
+function groqEnvKey(): string | undefined {
+  return process.env.GROQ_API_KEY || process.env.GROQ_API || undefined;
+}
+
 /** settings row first, env fallback (GROQ_API_KEY/GROQ_MODEL), else null */
 export async function getGuideConfig(db: Db): Promise<GuideConfig | null> {
   try {
@@ -161,10 +170,11 @@ export async function getGuideConfig(db: Db): Promise<GuideConfig | null> {
   } catch {
     /* fall through to env */
   }
-  if (process.env.GROQ_API_KEY) {
+  const envKey = groqEnvKey();
+  if (envKey) {
     return {
       model: process.env.GROQ_MODEL ?? "openai/gpt-oss-20b",
-      apiKey: process.env.GROQ_API_KEY,
+      apiKey: envKey,
     };
   }
   return null;
@@ -188,7 +198,7 @@ export async function getGuideSettingsView(db: Db): Promise<GuideSettingsView> {
       return { model: parsed.data.model, keySet: true, source: "settings" };
     }
   }
-  if (process.env.GROQ_API_KEY) {
+  if (groqEnvKey()) {
     return {
       model: process.env.GROQ_MODEL ?? "openai/gpt-oss-20b",
       keySet: true,

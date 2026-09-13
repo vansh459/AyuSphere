@@ -37,22 +37,37 @@ export async function streamGroqChat({
   messages: GroqMessage[];
   temperature?: number;
 }): Promise<ReadableStream<Uint8Array>> {
-  const res = await fetch(GROQ_URL, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      temperature,
-      stream: true,
-      messages,
-      // gpt-oss models "think" before the first content token; keep the
-      // silent phase short so streaming feels alive (and Vercel never 504s)
-      ...(model.includes("gpt-oss") ? { reasoning_effort: "low" } : {}),
-    }),
-  });
+  let res: Response;
+  try {
+    res = await fetch(GROQ_URL, {
+      method: "POST",
+      // hard cap well under the route's maxDuration: a hung upstream must
+      // surface as a readable JSON error, never a platform 504
+      signal: AbortSignal.timeout(20_000),
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        temperature,
+        stream: true,
+        messages,
+        // gpt-oss models "think" before the first content token; keep the
+        // silent phase short so streaming feels alive (and Vercel never 504s)
+        ...(model.includes("gpt-oss") ? { reasoning_effort: "low" } : {}),
+      }),
+    });
+  } catch (err) {
+    if (err instanceof Error && err.name === "TimeoutError") {
+      throw new Error(
+        "Groq did not respond within 20s — the model may be overloaded; try again",
+      );
+    }
+    throw new Error(
+      `could not reach Groq (${err instanceof Error ? err.message : "network error"})`,
+    );
+  }
 
   if (!res.ok || !res.body) {
     let detail = `Groq request failed (${res.status})`;
