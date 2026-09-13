@@ -174,7 +174,7 @@ export function GuideWidget({ userName }: { userName: string }) {
               </button>
             </div>
 
-            <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto bg-bg/50 p-3.5 scroll-dark">
+            <div ref={scrollRef} className="scroll-light min-h-0 flex-1 space-y-3 overflow-y-auto bg-bg/50 p-3.5">
               {turns.length === 0 && orb !== "thinking" ? (
                 <div className="rounded-2xl border border-line/60 bg-surface p-3.5 shadow-xs">
                   <p className="font-bold text-ink">
