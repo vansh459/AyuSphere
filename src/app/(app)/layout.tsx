@@ -1,11 +1,13 @@
 import { redirect } from "next/navigation";
-import { ChevronDown, Search } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { auth, signOut } from "@/lib/auth";
-import { navForRole } from "@/lib/nav";
+import { groupedNavForRole } from "@/lib/nav";
 import { can } from "@/lib/rbac";
 import { getDb } from "@/db";
 import { badgeCounts, type BadgeCounts } from "@/services/badges";
 import { Sidebar } from "@/components/app/sidebar";
+import { MobileNav } from "@/components/app/mobile-nav";
+import { QuickSearch } from "@/components/app/quick-search";
 import { TopbarBell } from "@/components/app/live-badges";
 import { GuideWidget } from "@/components/app/guide-widget";
 import { MessageToast } from "@/components/app/message-toast";
@@ -29,7 +31,7 @@ export default async function AppLayout({
   const session = await auth();
   if (!session?.user) redirect("/login");
   const { user } = session;
-  const items = navForRole(user.role);
+  const groups = groupedNavForRole(user.role);
 
   // initial counts only — the layout renders once per hard load, so the
   // Sidebar/TopbarBell keep these live client-side via /api/badges
@@ -57,18 +59,12 @@ export default async function AppLayout({
     <div className="flex min-h-screen w-full">
       {/* chrome hides when printing — DSMB/SAE report artifacts print clean */}
       <div className="contents print:hidden">
-        <Sidebar items={items} badges={badges} />
+        <Sidebar groups={groups} badges={badges} />
       </div>
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-10 flex items-center gap-4 border-b border-line bg-surface px-4 py-3 md:px-6 print:hidden">
-          <label className="relative min-w-0 flex-1 md:max-w-xl">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-40" />
-            <input
-              type="search"
-              placeholder="Search trials, participants, documents…"
-              className="h-10 w-full rounded-xl border border-line bg-bg pl-9 pr-3 outline-none transition-colors duration-200 focus:border-primary"
-            />
-          </label>
+        <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-line bg-surface px-4 py-3 md:px-6 print:hidden">
+          <MobileNav groups={groups} badges={badges} />
+          <QuickSearch />
 
           <div className="ml-auto flex items-center gap-3">
             {can(user.role, "alert.acknowledge") ? (

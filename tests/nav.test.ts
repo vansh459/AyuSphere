@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { NAV_ITEMS, navForRole } from "@/lib/nav";
+import {
+  GROUPED_NAV_THRESHOLD,
+  NAV_GROUPS,
+  NAV_ITEMS,
+  groupedNavForRole,
+  navForRole,
+} from "@/lib/nav";
 import { MUTATING_CAPABILITIES, ROLES } from "@/lib/rbac";
 
 describe("T1.7 — role-gated navigation", () => {
@@ -39,5 +45,49 @@ describe("T1.7 — role-gated navigation", () => {
     for (const item of NAV_ITEMS) {
       expect(item.capability).toBeTruthy();
     }
+  });
+});
+
+describe("T6.4 — grouped sidebar navigation", () => {
+  it("every nav item carries a declared group", () => {
+    for (const item of NAV_ITEMS) {
+      expect(NAV_GROUPS).toContain(item.group);
+    }
+  });
+
+  it("grouping preserves exactly the role's RBAC-filtered items, in group order", () => {
+    for (const role of ROLES) {
+      const flat = navForRole(role).map((i) => i.href).sort();
+      const grouped = groupedNavForRole(role)
+        .flatMap((g) => g.items.map((i) => i.href))
+        .sort();
+      expect(grouped, `${role}: grouped nav must equal flat nav`).toEqual(flat);
+    }
+  });
+
+  it(`section headers only for roles with more than ${GROUPED_NAV_THRESHOLD} items`, () => {
+    // long lists chunk into sections…
+    for (const role of ["pi", "coordinator", "admin"] as const) {
+      const groups = groupedNavForRole(role);
+      expect(
+        groups.length,
+        `${role} (${navForRole(role).length} items) should be sectioned`,
+      ).toBeGreaterThan(1);
+    }
+    // …sparse roles stay one flat list (headers would be noise)
+    for (const role of ["ethics", "monitor", "pv", "regulator"] as const) {
+      expect(groupedNavForRole(role)).toHaveLength(1);
+    }
+  });
+
+  it("admin sees all six sections; regulator's flat list never includes Settings", () => {
+    expect(groupedNavForRole("admin").map((g) => g.group)).toEqual([
+      ...NAV_GROUPS,
+    ]);
+    const regulator = groupedNavForRole("regulator").flatMap((g) =>
+      g.items.map((i) => i.href),
+    );
+    expect(regulator).not.toContain("/settings");
+    expect(regulator).not.toContain("/trials");
   });
 });

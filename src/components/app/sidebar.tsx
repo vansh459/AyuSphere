@@ -1,60 +1,28 @@
 "use client";
 
+/**
+ * Desktop sidebar — grouped sections (UI audit T6.4), compact rows, slim
+ * footer, live badges, and the floating custom scrollbar. Mobile gets the
+ * same nav via the MobileNav drawer instead (this aside is max-md:hidden).
+ */
 import { useState, useRef, useEffect, useCallback } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import {
-  AlertTriangle,
-  Bell,
-  Bot,
-  Calendar,
-  ClipboardList,
-  Download,
-  FileText,
-  FlaskConical,
-  History,
-  Home,
-  Leaf,
-  MapPin,
-  MessageSquare,
-  ScanLine,
-  Settings,
-  Users,
-} from "lucide-react";
+import { Leaf } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLiveBadges } from "@/components/app/live-badges";
-import type { NavItem } from "@/lib/nav";
-
-const ICONS: Record<NavItem["icon"], React.ComponentType<{ className?: string }>> = {
-  home: Home,
-  flask: FlaskConical,
-  users: Users,
-  "map-pin": MapPin,
-  calendar: Calendar,
-  clipboard: ClipboardList,
-  "alert-triangle": AlertTriangle,
-  message: MessageSquare,
-  scan: ScanLine,
-  bell: Bell,
-  bot: Bot,
-  "file-text": FileText,
-  download: Download,
-  history: History,
-  settings: Settings,
-};
+import { NavList } from "@/components/app/nav-list";
+import type { GroupedNav } from "@/lib/nav";
 
 export function Sidebar({
-  items,
+  groups,
   badges,
 }: {
-  items: NavItem[];
+  groups: GroupedNav;
   badges?: Record<string, number>;
 }) {
   // server-rendered counts freeze across client navigation (the layout only
   // renders on hard loads) — keep them live so e.g. reading a message
   // actually clears the "Messages" badge
   const liveBadges = useLiveBadges(badges ?? {});
-  const pathname = usePathname();
   const navRef = useRef<HTMLElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const [thumbHeight, setThumbHeight] = useState(0);
@@ -155,11 +123,7 @@ export function Sidebar({
 
   return (
     <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col bg-primary-deep text-white max-md:hidden">
-      <Link
-        href="/dashboard"
-        className="flex items-center gap-2.5 px-5 py-5 transition-opacity duration-200 hover:opacity-90 active:scale-[0.98]"
-        aria-label="AyuSphere Dashboard"
-      >
+      <div className="flex items-center gap-2.5 px-5 py-4">
         <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary">
           <Leaf className="h-5 w-5" />
         </span>
@@ -169,7 +133,7 @@ export function Sidebar({
             Research Today · Healthier Tomorrow
           </p>
         </div>
-      </Link>
+      </div>
 
       <div
         className="relative flex min-h-0 flex-1 flex-col"
@@ -185,39 +149,7 @@ export function Sidebar({
           onScroll={handleScroll}
           className="scroll-dark flex flex-1 flex-col gap-0.5 overflow-y-auto px-3 pb-4"
         >
-          {items.map((item) => {
-            const Icon = ICONS[item.icon];
-            const active =
-              pathname === item.href || pathname.startsWith(`${item.href}/`);
-            const count = liveBadges[item.href] ?? 0;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-3 rounded-xl px-3 py-2.5 font-medium transition-colors duration-200",
-                  active
-                    ? "bg-primary text-white"
-                    : "text-white/70 hover:bg-white/10 hover:text-white",
-                )}
-              >
-                <Icon className="h-4 w-4 shrink-0" />
-                <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                {count > 0 ? (
-                  <span
-                    className={cn(
-                      "flex shrink-0 items-center justify-center rounded-full font-bold shadow-xs sidebar-count-badge",
-                      active
-                        ? "bg-primary-deep text-white"
-                        : "bg-white/20 text-white",
-                    )}
-                  >
-                    {count > 9 ? "9+" : count}
-                  </span>
-                ) : null}
-              </Link>
-            );
-          })}
+          <NavList groups={groups} badges={liveBadges} />
         </nav>
 
         {/* Custom interactive floating animated scrollbar */}
@@ -244,12 +176,12 @@ export function Sidebar({
         )}
       </div>
 
-      <div className="border-t border-white/10 px-5 py-4">
-        <p className="font-bold tracking-widest">AYUSH</p>
-        <p className="mt-1 leading-snug opacity-60">
-          Traditional Wisdom
-          <br />
-          Modern Evidence
+      {/* slim one-line footer (was a 3-line block eating ~90px) */}
+      <div className="border-t border-white/10 px-5 py-3">
+        <p className="truncate opacity-60">
+          <span className="font-bold tracking-widest">AYUSH</span>
+          <span className="mx-1.5">·</span>
+          Traditional Wisdom, Modern Evidence
         </p>
       </div>
     </aside>

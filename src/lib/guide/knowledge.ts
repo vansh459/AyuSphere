@@ -22,7 +22,7 @@ export const GLOBAL_KNOWLEDGE = {
   login:
     "Sign in at /login with your email and password. You are signed out via the profile chip (top-right) → **Sign out**.",
   navigation:
-    "The dark green sidebar on the left lists every screen your role can access. The top bar has a global search box, a bell icon showing open alerts (click it to open **Alerts** if your role has it), and your profile chip.",
+    "The dark green sidebar on the left lists every screen your role can access, grouped into sections (Overview, Study Conduct, Data Capture, Safety & Quality, Intelligence, System) when the list is long. On phones, the sidebar becomes a menu button (☰) in the top bar that opens the same navigation as a drawer. The top bar also has a quick search (type 2+ letters to jump to a screen, a trial by protocol code, or a participant by subject code — Enter opens the first match), a bell icon showing open alerts (click it to open **Alerts** if your role has it), and your profile chip.",
   messages:
     "**Messages** (sidebar): pick any person in the People list to chat. Type in the box and press Enter or the send button. The paperclip attaches a file or image (max 2 MB). Click any attachment to preview it in a popup; the popup has a download button. Unread counts show as badges next to contacts.",
   previews:
@@ -81,7 +81,8 @@ export const ROLE_KNOWLEDGE: Record<Role, RoleKnowledge> = {
       {
         goal: "Watch safety deadlines",
         steps: [
-          "**Adverse Events** lists open AE/SAE sorted by reporting deadline with a live countdown clock (amber under 24h, red under 6h)",
+          "**Adverse Events** → the **Open AEs** tab lists open AE/SAE sorted by reporting deadline with a live countdown clock (amber under 24h, red under 6h)",
+          "To record a new event, switch to the **Capture** tab and use the MedDRA/WHODrug pickers; the **Safety Signals** tab shows term×trial clusters and the DSMB summary link",
           "Open **Alerts** to acknowledge deadline, enrolment-lag, overdue-visit and deviation alerts",
         ],
       },
@@ -210,7 +211,9 @@ export const ROLE_KNOWLEDGE: Record<Role, RoleKnowledge> = {
       {
         goal: "Track AE/SAE reporting deadlines",
         steps: [
-          "**Adverse Events** lists every open AE/SAE sorted by reporting deadline, each with a live countdown clock (amber < 24h, red < 6h, pulsing when breached)",
+          "**Adverse Events** → **Open AEs** tab lists every open AE/SAE sorted by reporting deadline, each with a live countdown clock (amber < 24h, red < 6h, pulsing when breached)",
+          "On an open event: **Start PV review**, then **Sign & mark reported** (re-enter your password — it's an e-signature), or **Generate regulatory report** for the printable CIOMS-style summary",
+          "The **Capture** tab records a new event with MedDRA/WHODrug pickers; **Safety Signals** shows term×trial clusters + the DSMB summary; **NPvCC ADRs** receives spontaneous reports (receive → assess → forward)",
           "Deadline alerts (approaching/breached) also appear under **Alerts** — click **Acknowledge** to own one",
         ],
       },

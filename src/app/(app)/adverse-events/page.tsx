@@ -55,6 +55,24 @@ export default async function AdverseEventsPage(props: {
   const canCapture = can(session.user.role, "ae.capture");
   const canReview = can(session.user.role, "ae.review");
 
+  // tabs (UI audit T6.4): the page previously stacked capture + signals +
+  // open list + ADR intake in one scroll — each now loads only when shown
+  const requestedTab = typeof sp.tab === "string" ? sp.tab : "open";
+  const tab: "open" | "capture" | "signals" | "adrs" =
+    requestedTab === "capture" && canCapture
+      ? "capture"
+      : requestedTab === "signals"
+        ? "signals"
+        : requestedTab === "adrs" && canReview
+          ? "adrs"
+          : "open";
+  const tabBar = [
+    { key: "open", label: "Open AEs", show: true },
+    { key: "capture", label: "Capture", show: canCapture },
+    { key: "signals", label: "Safety Signals", show: true },
+    { key: "adrs", label: "NPvCC ADRs", show: canReview },
+  ] as const;
+
   let rows: Awaited<ReturnType<typeof openAesByDeadline>> = [];
   let signals: Awaited<ReturnType<typeof safetySignals>> = [];
   let adrs: Awaited<ReturnType<typeof listSuspectedAdrs>> = [];
@@ -62,10 +80,10 @@ export default async function AdverseEventsPage(props: {
   let dbError = false;
   try {
     const db = getDb();
-    rows = await openAesByDeadline(db);
-    signals = await safetySignals(db);
-    if (canReview) adrs = await listSuspectedAdrs(db, 20);
-    if (canCapture) {
+    if (tab === "open") rows = await openAesByDeadline(db);
+    if (tab === "signals") signals = await safetySignals(db);
+    if (tab === "adrs" && canReview) adrs = await listSuspectedAdrs(db, 20);
+    if (tab === "capture" && canCapture) {
       const pRows = await db
         .select({
           id: participants.id,
@@ -118,9 +136,10 @@ export default async function AdverseEventsPage(props: {
         whodrugCode: whodrug?.code,
       });
     } catch (e) {
-      redirect(withError("/adverse-events", e));
+      redirect(withError("/adverse-events?tab=capture", e));
     }
     revalidatePath("/adverse-events");
+    // land on Open AEs so the freshly captured event (and its clock) is visible
     redirect("/adverse-events");
   }
 
@@ -198,10 +217,10 @@ export default async function AdverseEventsPage(props: {
           String(formData.get("reporterRole") ?? "").trim() || undefined,
       });
     } catch (e) {
-      redirect(withError("/adverse-events", e));
+      redirect(withError("/adverse-events?tab=adrs", e));
     }
     revalidatePath("/adverse-events");
-    redirect("/adverse-events");
+    redirect("/adverse-events?tab=adrs");
   }
 
   async function advanceAdr(formData: FormData) {
@@ -217,10 +236,10 @@ export default async function AdverseEventsPage(props: {
         String(formData.get("note") ?? "").trim() || undefined,
       );
     } catch (e) {
-      redirect(withError("/adverse-events", e));
+      redirect(withError("/adverse-events?tab=adrs", e));
     }
     revalidatePath("/adverse-events");
-    redirect("/adverse-events");
+    redirect("/adverse-events?tab=adrs");
   }
 
   return (
@@ -235,7 +254,34 @@ export default async function AdverseEventsPage(props: {
       </div>
       <ErrorBanner message={typeof sp.error === "string" ? sp.error : undefined} />
 
-      {canCapture && !dbError ? (
+      {/* tab bar (UI audit T6.4) — link-based, no client state */}
+      <div className="flex flex-wrap gap-2">
+        {tabBar.map((t) =>
+          t.show ? (
+            <Link
+              key={t.key}
+              href={`/adverse-events?tab=${t.key}`}
+              className={
+                tab === t.key
+                  ? "rounded-xl bg-primary px-4 py-2 font-medium text-white"
+                  : "rounded-xl border border-line bg-surface px-4 py-2 font-medium opacity-70 transition-colors duration-200 hover:border-primary hover:opacity-100"
+              }
+            >
+              {t.label}
+            </Link>
+          ) : null,
+        )}
+      </div>
+
+      {dbError ? (
+        <Card>
+          <p className="text-warning font-medium">
+            Database not configured — set DATABASE_URL and run the seed.
+          </p>
+        </Card>
+      ) : null}
+
+      {tab === "capture" && canCapture && !dbError ? (
         <Card className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <CardTitle className="text-body font-bold">
@@ -346,7 +392,7 @@ export default async function AdverseEventsPage(props: {
         </Card>
       ) : null}
 
-      {!dbError ? (
+      {tab === "signals" && !dbError ? (
         <Card className="flex flex-col gap-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <CardTitle className="text-body font-bold">
@@ -387,13 +433,7 @@ export default async function AdverseEventsPage(props: {
         </Card>
       ) : null}
 
-      {dbError ? (
-        <Card>
-          <p className="text-warning font-medium">
-            Database not configured — set DATABASE_URL and run the seed.
-          </p>
-        </Card>
-      ) : rows.length === 0 ? (
+      {tab !== "open" || dbError ? null : rows.length === 0 ? (
         <Card>
           <p className="opacity-70">
             No open adverse events. Captured events appear here with their
@@ -493,7 +533,7 @@ export default async function AdverseEventsPage(props: {
         </div>
       )}
 
-      {canReview && !dbError ? (
+      {tab === "adrs" && canReview && !dbError ? (
         <Card className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <CardTitle className="text-body font-bold">
