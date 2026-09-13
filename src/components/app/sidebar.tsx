@@ -42,7 +42,13 @@ const ICONS: Record<NavItem["icon"], React.ComponentType<{ className?: string }>
   settings: Settings,
 };
 
-export function Sidebar({ items }: { items: NavItem[] }) {
+export function Sidebar({
+  items,
+  badges,
+}: {
+  items: NavItem[];
+  badges?: Record<string, number>;
+}) {
   const pathname = usePathname();
   const navRef = useRef<HTMLElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
@@ -174,6 +180,7 @@ export function Sidebar({ items }: { items: NavItem[] }) {
             const Icon = ICONS[item.icon];
             const active =
               pathname === item.href || pathname.startsWith(`${item.href}/`);
+            const count = badges?.[item.href] ?? 0;
             return (
               <Link
                 key={item.href}
@@ -186,7 +193,21 @@ export function Sidebar({ items }: { items: NavItem[] }) {
                 )}
               >
                 <Icon className="h-4 w-4 shrink-0" />
-                {item.label}
+                <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                {count > 0 ? (
+                  <span
+                    className={cn(
+                      "flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full px-1.5 text-[10px] font-bold leading-none shadow-xs",
+                      item.href === "/alerts"
+                        ? "bg-danger text-white"
+                        : active
+                          ? "bg-primary-deep text-white"
+                          : "bg-white/20 text-white",
+                    )}
+                  >
+                    {count > 9 ? "9+" : count}
+                  </span>
+                ) : null}
               </Link>
             );
           })}

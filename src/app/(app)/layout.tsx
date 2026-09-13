@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { Bell, ChevronDown, Search } from "lucide-react";
 import { auth, signOut } from "@/lib/auth";
 import { navForRole } from "@/lib/nav";
 import { can } from "@/lib/rbac";
 import { getDb } from "@/db";
-import { alerts } from "@/db/schema";
+import { alerts, messages } from "@/db/schema";
 import { Sidebar } from "@/components/app/sidebar";
 import { GuideWidget } from "@/components/app/guide-widget";
 import { Button } from "@/components/ui/button";
@@ -44,6 +44,19 @@ export default async function AppLayout({
     }
   }
 
+  let unreadMessages = 0;
+  if (can(user.role, "chat.use")) {
+    try {
+      const [res] = await getDb()
+        .select({ count: sql<number>`count(*)::int` })
+        .from(messages)
+        .where(and(eq(messages.recipientId, user.id), isNull(messages.readAt)));
+      unreadMessages = res?.count ?? 0;
+    } catch {
+      unreadMessages = 0;
+    }
+  }
+
   const initials = (user.name ?? "?")
     .split(" ")
     .map((w) => w[0])
@@ -55,7 +68,13 @@ export default async function AppLayout({
     <div className="flex min-h-screen w-full">
       {/* chrome hides when printing — DSMB/SAE report artifacts print clean */}
       <div className="contents print:hidden">
-        <Sidebar items={items} />
+        <Sidebar
+          items={items}
+          badges={{
+            "/messages": unreadMessages,
+            "/alerts": openAlerts,
+          }}
+        />
       </div>
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-10 flex items-center gap-4 border-b border-line bg-surface px-4 py-3 md:px-6 print:hidden">
@@ -77,7 +96,7 @@ export default async function AppLayout({
               >
                 <Bell className="h-5 w-5 opacity-70" />
                 {openAlerts > 0 ? (
-                  <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-danger px-1 font-bold text-white">
+                  <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-bold leading-none text-white ring-2 ring-surface shadow-xs">
                     {openAlerts > 9 ? "9+" : openAlerts}
                   </span>
                 ) : null}
