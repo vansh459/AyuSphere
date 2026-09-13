@@ -98,7 +98,7 @@ export function GuideWidget({ userName }: { userName: string }) {
       setOrb("talking");
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
-      for (;;) {
+      for (; ;) {
         const { done, value } = await reader.read();
         if (done) break;
         const chunk = decoder.decode(value, { stream: true });
@@ -140,7 +140,7 @@ export function GuideWidget({ userName }: { userName: string }) {
   }
 
   return (
-    <div className="fixed bottom-5 right-5 z-40 flex flex-col items-end gap-3">
+    <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-3">
       <AnimatePresence>
         {open ? (
           <motion.div
@@ -148,57 +148,71 @@ export function GuideWidget({ userName }: { userName: string }) {
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="glass flex h-[28rem] w-80 flex-col overflow-hidden max-md:w-[calc(100vw-2.5rem)]"
+            className="flex h-[30rem] w-[23rem] flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-[0_16px_48px_rgba(28,30,29,0.18)] max-md:w-[calc(100vw-2.5rem)]"
             role="dialog"
             aria-label={`${GUIDE_NAME} guide`}
           >
-            <div className="flex items-center justify-between border-b border-line/60 px-4 py-2.5">
-              <p className="font-bold text-primary-deep">
-                {GUIDE_NAME}
-                <span className="ml-2 font-medium opacity-50">your guide</span>
-              </p>
+            <div className="flex items-center justify-between border-b border-line bg-primary-soft/50 px-4 py-3">
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-white shadow-xs">
+                  <Leaf className="h-4 w-4" />
+                </span>
+                <div>
+                  <p className="font-bold leading-tight text-primary-deep">
+                    {GUIDE_NAME}
+                    <span className="ml-2 font-medium opacity-60">your guide</span>
+                  </p>
+                </div>
+              </div>
               <button
                 type="button"
                 onClick={toggle}
-                className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition-colors duration-200 hover:bg-primary-soft"
+                className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-ink/70 transition-colors duration-200 hover:bg-primary-soft hover:text-ink"
                 aria-label="Close guide"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto p-3">
+            <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto bg-bg/50 p-3.5 scroll-dark">
               {turns.length === 0 && orb !== "thinking" ? (
-                <p className="opacity-60">
-                  Hi {userName.split(" ")[0]} — ask me how anything on this
-                  screen works.
-                </p>
+                <div className="rounded-2xl border border-line/60 bg-surface p-3.5 shadow-xs">
+                  <p className="font-bold text-ink">
+                    Hi {userName.split(" ")[0]} !
+                  </p>
+                  <p className="mt-1 text-ink/70">
+                    Ask me how anything on this screen works or what you can do next.
+                  </p>
+                </div>
               ) : null}
               {turns.map((t, i) => (
                 <div
                   key={i}
                   className={cn(
-                    "max-w-[90%] rounded-2xl px-3 py-2",
+                    "max-w-[88%] rounded-2xl px-3.5 py-2.5 shadow-xs",
                     t.role === "user"
-                      ? "ml-auto bg-primary text-white"
-                      : "bg-surface shadow-[0_1px_3px_rgba(28,30,29,0.08)]",
+                      ? "ml-auto rounded-tr-xs bg-primary text-white font-medium"
+                      : "rounded-tl-xs border border-line/70 bg-surface text-ink",
                   )}
                 >
                   {renderLite(t.content)}
                 </div>
               ))}
               {orb === "thinking" ? (
-                <p className="opacity-50">{GUIDE_NAME} is thinking…</p>
+                <div className="flex items-center gap-2 text-ink/60 px-1 py-1">
+                  <span className="inline-block h-2 w-2 animate-ping rounded-full bg-primary" />
+                  <p>{GUIDE_NAME} is thinking…</p>
+                </div>
               ) : null}
               {error ? (
-                <p role="alert" className="text-danger">
+                <div role="alert" className="rounded-xl border border-danger/30 bg-danger/10 p-3 text-danger">
                   {error}
-                </p>
+                </div>
               ) : null}
             </div>
 
             <form
-              className="flex items-center gap-2 border-t border-line/60 p-2.5"
+              className="flex items-center gap-2 border-t border-line bg-surface p-3"
               onSubmit={(e) => {
                 e.preventDefault();
                 send();
@@ -208,12 +222,12 @@ export function GuideWidget({ userName }: { userName: string }) {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="How do I…?"
-                className="h-10 min-w-0 flex-1 rounded-xl border border-line bg-surface px-3 outline-none transition-colors duration-200 focus:border-primary"
+                className="h-10 min-w-0 flex-1 rounded-xl border border-line bg-bg/60 px-3.5 text-ink outline-none transition-colors duration-200 focus:border-primary focus:bg-surface"
               />
               <button
                 type="submit"
                 disabled={!input.trim() || orb === "thinking"}
-                className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl bg-primary text-white disabled:opacity-50"
+                className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl bg-primary-deep text-white shadow-sm transition-all duration-200 hover:bg-primary active:bg-primary-deep disabled:cursor-not-allowed disabled:bg-primary-deep/85 disabled:text-white/80"
                 aria-label="Send to guide"
               >
                 <Send className="h-4 w-4" />

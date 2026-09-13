@@ -93,7 +93,7 @@ export function StatusBadge({ status }: { status: string }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full px-2.5 py-0.5 font-medium",
+        "inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-2.5 py-0.5 font-medium",
         STATUS_TONE[status] ?? "bg-primary-soft text-primary-deep",
       )}
     >

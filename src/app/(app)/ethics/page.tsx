@@ -205,7 +205,7 @@ export default async function EthicsPage(props: {
             ) : (
               decided.map((t) => (
                 <div key={t.id} className="flex items-center justify-between gap-3">
-                  <p className="opacity-70">
+                  <p className="min-w-0 flex-1 opacity-70">
                     {t.protocolCode} — {t.title}
                   </p>
                   <StatusBadge status={t.status} />
