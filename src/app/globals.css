@@ -95,6 +95,26 @@
   }
 }
 
+/* Thin visible scrollbar for light surfaces (chat panels, scroll areas) */
+@utility scroll-light {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(28, 30, 29, 0.25) transparent;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: rgba(28, 30, 29, 0.25);
+    border-radius: 9999px;
+  }
+  &::-webkit-scrollbar-thumb:hover {
+    background: rgba(28, 30, 29, 0.4);
+  }
+}
+
 /* Micro-label: the only sanctioned "third look" — still body size (D-008) */
 @utility microlabel {
   font-size: var(--text-body);
