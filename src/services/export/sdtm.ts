@@ -3,7 +3,7 @@
  * CSV plus a Define-XML stub (D-017). CDASH-aligned capture makes this a
  * projection, not a transformation.
  */
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import type { Db } from "@/db";
 import {
   adverseEvents,
@@ -132,6 +132,25 @@ export async function buildAeDomain(db: Db, trialId: string) {
     };
   });
   return { columns: AE_COLUMNS, rows, csv: toCsv(AE_COLUMNS, rows) };
+}
+
+/**
+ * Per-trial row counts for the Exports page (T6.9) — how many data rows each
+ * domain will contain, so an empty-but-valid CSV (headers only) is expected
+ * before download instead of read as a failure.
+ */
+export async function exportRowCounts(db: Db) {
+  return db
+    .select({
+      trialId: trials.id,
+      participants: sql<number>`count(distinct ${participants.id})::int`,
+      aes: sql<number>`count(distinct ${adverseEvents.id})::int`,
+    })
+    .from(trials)
+    .leftJoin(trialSites, eq(trialSites.trialId, trials.id))
+    .leftJoin(participants, eq(participants.trialSiteId, trialSites.id))
+    .leftJoin(adverseEvents, eq(adverseEvents.participantId, participants.id))
+    .groupBy(trials.id);
 }
 
 // ---------- Define-XML (T9.1 — real variable-level metadata) ----------

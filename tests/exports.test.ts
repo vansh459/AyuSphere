@@ -15,6 +15,7 @@ import {
   buildAeDomain,
   buildDmDomain,
   defineXml,
+  exportRowCounts,
   toCsv,
 } from "@/services/export/sdtm";
 import { buildAdsl } from "@/services/export/adam";
@@ -103,6 +104,21 @@ describe("T4.2 — SDTM domains", () => {
     expect(sae!.AETERM).toBe("Severe gastric irritation");
     expect(sae!.AESEV).toBe("SEVERE");
     for (const row of ae.rows) expect(["Y", "N"]).toContain(row.AESER);
+  });
+
+  it("exportRowCounts: per-trial participant/AE counts match the domains (T6.9)", async () => {
+    const counts = await exportRowCounts(db);
+    const byId = new Map(counts.map((c) => [c.trialId, c]));
+    expect(byId.get(ayu1Id)).toMatchObject({ participants: 45, aes: 3 });
+    // a trial without AEs reports 0 — and its AE CSV is exactly the header line
+    const [ayu2] = await db
+      .select()
+      .from(trials)
+      .where(eq(trials.protocolCode, "AYU-002"));
+    expect(byId.get(ayu2.id)!.aes).toBe(0);
+    const ae2 = await buildAeDomain(db, ayu2.id);
+    expect(ae2.rows).toHaveLength(0);
+    expect(ae2.csv).toBe(AE_COLUMNS.join(",") + "\n");
   });
 
   it("CSV escapes commas and quotes", () => {
