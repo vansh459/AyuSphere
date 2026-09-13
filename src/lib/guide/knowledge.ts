@@ -57,8 +57,23 @@ export const ROLE_KNOWLEDGE: Record<Role, RoleKnowledge> = {
         goal: "Enrol a participant",
         steps: [
           "Go to **Participants**, choose the active trial · site, click **Add (code auto-generated)** — the subject code is created for you, no personal data is entered",
-          "On the new row click **Pass screening**, then **Record consent**",
-          "Pick the arm (intervention/control) and click **Enrol** — the protocol visit schedule is generated automatically",
+          "On the new row click **Pass screening**, then **Record consent** — consent binds the trial's current consent-form version (a trial with no consent form on file refuses consent)",
+          "Click **Enrol & randomize** — the arm is assigned by permuted-block randomization (no manual choice) and the protocol visit schedule is generated automatically",
+        ],
+      },
+      {
+        goal: "Amend an active protocol (IEC oversight)",
+        steps: [
+          "Open the trial page — the **Protocol amendments** card shows the current protocol version",
+          "Describe the change in **Amendment summary** and click **Submit to Ethics**; the Ethics Committee approves or returns it with a comment",
+          "Once approved, the protocol change (visit plan / arms) can be applied — it consumes the amendment and bumps the protocol version",
+        ],
+      },
+      {
+        goal: "Answer a monitor's data query",
+        steps: [
+          "Open the visit under **Visit Schedule** — an entry with an open query shows the monitor's question and \"approval is blocked until this query is answered\"",
+          "Type the answer and click **Answer**; approval unlocks once answered, and the monitor closes the query on their side",
         ],
       },
       {
@@ -66,7 +81,7 @@ export const ROLE_KNOWLEDGE: Record<Role, RoleKnowledge> = {
         steps: [
           "Go to **Visit Schedule**, click the participant's visit",
           "Fill the e-CRF fields (plausible ranges are shown under each field) and click **Save & submit for approval**",
-          "Click **Approve** on the submitted entry (only you or an Admin can), then **Mark visit completed**",
+          "On the submitted entry, enter your password and click **Sign & approve** — approval is an electronic signature (your password is re-verified and a SHA-256 hash of the record is stored); then **Mark visit completed**",
         ],
       },
       {
@@ -95,7 +110,8 @@ export const ROLE_KNOWLEDGE: Record<Role, RoleKnowledge> = {
       {
         goal: "Export submission-ready data",
         steps: [
-          "Go to **Reports & Exports**, pick a trial, download **FHIR R4 Bundle**, **SDTM DM (CSV)**, **SDTM AE (CSV)** or the **Define-XML stub** — every export is recorded in the audit trail",
+          "Go to **Reports & Exports**, pick a trial, download **FHIR R4 Bundle**, **SDTM DM (CSV)**, **SDTM AE (CSV)**, **ADaM ADSL (CSV)** or **Define-XML** (variable-level metadata) — every export is recorded in the audit trail",
+          "Systems can also pull live FHIR from the API (audited), and inbound Observation bundles land as DRAFT CRF entries — nothing imported auto-commits",
         ],
       },
     ],
@@ -124,7 +140,13 @@ export const ROLE_KNOWLEDGE: Record<Role, RoleKnowledge> = {
         goal: "Add and enrol a participant",
         steps: [
           "Go to **Participants**, choose the active trial · site, click **Add (code auto-generated)**",
-          "Click **Pass screening**, then **Record consent**, pick the arm and click **Enrol** — visits are generated automatically",
+          "Click **Pass screening**, then **Record consent** (binds the trial's current consent-form version), then **Enrol & randomize** — the arm is assigned automatically and visits are generated",
+        ],
+      },
+      {
+        goal: "Answer a monitor's data query",
+        steps: [
+          "Open the visit under **Visit Schedule** — an entry with an open query shows the monitor's question; type the answer and click **Answer** (approval stays blocked until answered)",
         ],
       },
       {
@@ -165,21 +187,42 @@ export const ROLE_KNOWLEDGE: Record<Role, RoleKnowledge> = {
     dashboard_sections: ["Dashboard", "Messages", "Monitoring", "Alerts"],
     core_workflows: [
       {
+        goal: "Log a monitoring visit",
+        steps: [
+          "Go to **Monitoring** — the 'Monitoring visits' card lists every activated trial-site with its due date",
+          "Pick the trial site and a date, click **Schedule monitoring visit**; after the visit, fill the summary (and findings, one per line) and click **Complete visit** — the site's next due date advances by the configured cadence and any overdue alert auto-resolves",
+        ],
+      },
+      {
+        goal: "Raise and close data queries",
+        steps: [
+          "On **Monitoring**, the 'Data queries' card shows open/answered/closed counts and median cycle time",
+          "Pick the CRF entry, type the question and click **Raise query** — the entry CANNOT be approved until the data-entry team answers it",
+          "Once answered, click **Close query** (optionally with a resolution note)",
+        ],
+      },
+      {
         goal: "Review site performance and data quality",
         steps: [
-          "Go to **Monitoring** — each active trial shows per-site recruitment bars, open data-quality findings (duplicates, impossible values, missing assessments) and deviation alerts",
+          "**Monitoring** also shows, per active trial: per-site recruitment bars, open data-quality findings (duplicates, impossible values, missing assessments) and deviation alerts",
         ],
       },
       {
         goal: "Work the alert queue",
         steps: [
-          "Go to **Alerts**, review overdue-visit / deviation / data-quality items and click **Acknowledge** on the ones you own",
+          "Go to **Alerts**, review overdue-visit / deviation / data-quality / monitoring-overdue items and click **Acknowledge** on the ones you own",
         ],
       },
     ],
-    permissions: ["view monitoring analytics and data-quality findings", "acknowledge alerts", "message any user"],
+    permissions: [
+      "schedule and complete monitoring visits (the due-date cadence is admin-configurable)",
+      "raise and close data queries on CRF entries — an open query blocks approval",
+      "view monitoring analytics and data-quality findings",
+      "acknowledge alerts",
+      "message any user",
+    ],
     cannot_do: [
-      "enter or approve CRFs, enrol participants, or edit trials — those belong to the PI/Coordinator",
+      "enter or approve CRFs, answer data queries, enrol participants, or edit trials — those belong to the PI/Coordinator",
       "use the AI Copilot or exports",
       CANNOT_SHARED.auditImmutable,
     ],
@@ -196,8 +239,19 @@ export const ROLE_KNOWLEDGE: Record<Role, RoleKnowledge> = {
           "The 'Approved registry' below lists everything you've approved and its current status",
         ],
       },
+      {
+        goal: "Decide on a protocol amendment",
+        steps: [
+          "On **Ethics Review**, the 'Amendment queue' lists protocol amendments submitted by investigators (version, summary, trial)",
+          "Click **Approve**, or type a comment and click **Return** (a return REQUIRES a comment) — protocol changes on running trials are blocked until an amendment is approved",
+        ],
+      },
     ],
-    permissions: ["approve or return trials submitted for IEC review", "message any user"],
+    permissions: [
+      "approve or return trials submitted for IEC review",
+      "approve or return protocol amendments (the gate for changing a running trial's protocol)",
+      "message any user",
+    ],
     cannot_do: [
       "create or edit trials, participants or CRFs — you decide on submissions, you don't run studies",
       "see exports, alerts, or the AI Copilot",
@@ -250,10 +304,11 @@ export const ROLE_KNOWLEDGE: Record<Role, RoleKnowledge> = {
     ],
     core_workflows: [
       {
-        goal: "Configure the AI models",
+        goal: "Configure the AI models and alert rules",
         steps: [
           "Go to **Settings** — the 'AI Model' card sets the clinical AI (Gemini or Claude, model id + API key) used for note OCR and the Copilot; click **Save AI settings**",
-          "The 'Guide Assistant (Groq)' card sets the model and API key for Sphera (this floating guide)",
+          "The 'Alerts & Deadlines' card tunes the rule thresholds: enrolment-lag %, AE warning window, milestone lookahead, monitoring cadence, and the AE/SAE reporting-deadline table — every save is audited",
+          "The 'Guide Assistant (Groq)' card sets the model and API key for Sphera (this floating guide) — one stored key powers the guide for every role",
         ],
       },
       {
@@ -296,6 +351,7 @@ export const ROLE_KNOWLEDGE: Record<Role, RoleKnowledge> = {
         goal: "Walk the audit trail",
         steps: [
           "Go to **Audit Trail**, filter by entityType/entityId/action and click **Filter** — the complete, immutable history of every action, including who approved each record and when",
+          "Approvals and safety reports carry an electronic signature: the audit snapshot shows the signature id and the SHA-256 hash of the signed record",
         ],
       },
     ],

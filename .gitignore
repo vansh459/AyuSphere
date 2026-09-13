@@ -49,3 +49,6 @@ __pycache__/
 
 # live E2E screenshots
 .e2e-shots/
+
+# UAT guide build artifacts (screenshots + intermediate HTML)
+.uat-build/
