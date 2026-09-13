@@ -198,6 +198,7 @@ export const ROLE_KNOWLEDGE: Record<Role, RoleKnowledge> = {
         steps: [
           "On **Monitoring**, the 'Data queries' card shows open/answered/closed counts and median cycle time",
           "Pick the CRF entry, type the question and click **Raise query** — the entry CANNOT be approved until the data-entry team answers it",
+          "Each query row links to its visit page (**Answer on the visit page →**) — that is where the PI/Coordinator types the answer; answering is not done on Monitoring",
           "Once answered, click **Close query** (optionally with a resolution note)",
         ],
       },

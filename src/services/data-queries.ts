@@ -196,6 +196,7 @@ export async function listQueries(db: Db, limit = 50) {
       query: dataQueries,
       subjectCode: participants.subjectCode,
       visitName: visits.name,
+      visitId: visits.id,
       trialId: trialSites.trialId,
     })
     .from(dataQueries)

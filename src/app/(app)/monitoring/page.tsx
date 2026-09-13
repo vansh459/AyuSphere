@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { eq, inArray } from "drizzle-orm";
@@ -338,7 +339,7 @@ export default async function MonitoringPage(props: {
             {queries.length === 0 ? (
               <p className="opacity-70">No data queries yet.</p>
             ) : (
-              queries.map(({ query, subjectCode, visitName }) => (
+              queries.map(({ query, subjectCode, visitName, visitId }) => (
                 <div
                   key={query.id}
                   className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-3"
@@ -359,22 +360,37 @@ export default async function MonitoringPage(props: {
                       <p className="font-medium">{query.question}</p>
                     </div>
                     <p className="mt-1 opacity-50">
-                      {subjectCode} · {visitName} ·{" "}
-                      {fmtDate(query.createdAt)}
+                      <Link
+                        href={`/visits/${visitId}`}
+                        className="font-medium text-primary hover:underline"
+                      >
+                        {subjectCode} · {visitName}
+                      </Link>{" "}
+                      · {fmtDate(query.createdAt)}
                     </p>
                   </div>
                   {query.status !== "closed" ? (
-                    <form action={close} className="flex items-end gap-2">
-                      <input type="hidden" name="queryId" value={query.id} />
-                      <Input
-                        name="note"
-                        placeholder="resolution note (optional)"
-                        className="w-52"
-                      />
-                      <Button size="sm" variant="outline" type="submit">
-                        Close query
-                      </Button>
-                    </form>
+                    <div className="flex flex-wrap items-end gap-3">
+                      {query.status === "open" ? (
+                        <Link
+                          href={`/visits/${visitId}`}
+                          className="font-medium text-primary hover:underline"
+                        >
+                          Answer on the visit page →
+                        </Link>
+                      ) : null}
+                      <form action={close} className="flex items-end gap-2">
+                        <input type="hidden" name="queryId" value={query.id} />
+                        <Input
+                          name="note"
+                          placeholder="resolution note (optional)"
+                          className="w-52"
+                        />
+                        <Button size="sm" variant="outline" type="submit">
+                          Close query
+                        </Button>
+                      </form>
+                    </div>
                   ) : null}
                 </div>
               ))
