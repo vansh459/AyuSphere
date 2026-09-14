@@ -61,7 +61,11 @@ export function InstallBanner() {
     <div
       role="region"
       aria-label="Install app"
-      className="clay fixed inset-x-3 bottom-3 z-30 flex items-center gap-3 p-4 print:hidden"
+      className={
+        // right-20 keeps clear of the Sphera orb (fixed bottom-5 right-5,
+        // z-50) so the dismiss X is always tappable on phone screens
+        "clay fixed bottom-3 left-3 right-20 z-30 flex items-center gap-3 p-4 print:hidden"
+      }
     >
       <div className="min-w-0 flex-1">
         <p className="font-bold">Get the AyuSphere app</p>
