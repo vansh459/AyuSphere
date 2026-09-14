@@ -12,7 +12,7 @@ Companion documents: the 7 role UAT guides and `Judge_Demo_Script.md` (the 8-min
 
 **AyuSphere** is a working, deployed clinical trial management system for AIIA's Ayurveda trials — not a mock-up. It covers the full trial lifecycle (draft → IEC review → CTRI registration → active → completed → locked), participant screening/consent/enrolment with permuted-block randomization, template-driven e-CRFs with electronically signed approvals, a complete pharmacovigilance loop (MedDRA/WHODrug-coded AEs, configurable escalation deadlines, CIOMS-style reports, safety-signal detection, DSMB packs, NPvCC spontaneous-ADR intake), monitoring visits and data queries, protocol amendments under IEC control, and standards-based interoperability (CDISC SDTM/ADaM/Define-XML and a live two-way FHIR R4 API).
 
-Seven enforced roles each see a tailored workspace; every mutation is validated, permission-checked and audited in the same database transaction; and the whole system is gated by **297 automated tests** running against real Postgres.
+Seven enforced roles each see a tailored workspace; every mutation is validated, permission-checked and audited in the same database transaction; and the whole system is gated by **319 automated tests** running against real Postgres. It installs like a native app on phones (PWA), and every displayed date is pinned to IST regardless of where the server runs.
 
 ## 2 · Technology stack — what and how
 
@@ -27,7 +27,9 @@ Seven enforced roles each see a tailored workspace; every mutation is validated,
 | **framer-motion** | Animation | Small approved motion catalog — decorative only, never load-bearing. |
 | **Recharts** | Charts | Dashboard KPIs: enrolment progress, AE severity mix, portfolio charts. |
 | **Live badges (fetch + events)** | Dependency-free client refresh | Live unread badges and toasts refresh via plain `fetch` on navigation and a `refreshBadges` event — no data-fetching library; unused deps removed (T6.12). |
-| lucide-react · clsx · CVA · tailwind-merge | Icons & utilities | Iconography, class composition; date math is plain `Date` arithmetic in `src/lib`. |
+| **PWA (manifest + install banner)** | Installable web app | Standalone manifest; phone-only banner — Android gets the native install dialog (`beforeinstallprompt`), iPhone gets honest Share → Add to Home Screen instructions. Desktop/iPads never see it (incl. iPadOS masquerading as a Mac, excluded via touch-point detection). |
+| **IST dates (`src/lib/dates.ts`)** | One timezone truth | Servers run in UTC — bare formatting shifted IST users back a day around midnight. All date renders go through Asia/Kolkata-pinned helpers; a static test forbids bare `toLocale*String` calls. |
+| lucide-react · clsx · CVA · tailwind-merge | Icons & utilities | Iconography and conditional class composition across every screen. |
 
 ### Backend & data
 
@@ -37,6 +39,7 @@ Seven enforced roles each see a tailored workspace; every mutation is validated,
 | **Drizzle ORM + drizzle-kit** | Type-safe SQL builder + migrations | Every query is parameterized from the typed schema — string-built SQL does not exist in the codebase. Versioned generated migrations (0001–0009). |
 | **Zod 4** | Runtime validation | Every service input parsed at the boundary — types, lengths, enums, ranges — before any logic runs. |
 | **Vercel Blob** | Object storage | Consent forms, documents, doctor-note images under unguessable UUID paths. |
+| **In-process TTL cache (`src/lib/ttl-cache.ts`)** | Dependency-free response cache (ADR D-030) | Portfolio aggregates (45s), search (60s), Sphera config + fresh-thread replies cached per warm instance with stampede protection — audited responses and live badges provably never cached. |
 
 ### Auth & security
 
@@ -118,7 +121,7 @@ User asks Sphera (leaf orb)
 3. **Auditability (ALCOA+)** — `withAudit()`: every mutation and its audit event insert **in the same database transaction** — an unaudited write cannot commit, a failed write leaves no audit noise. Rows carry actor id + role, action, entity, **before/after JSON**; the table is insert-only; even cron writes are attributed to a fixed system actor.
 4. **Electronic signatures** — record-freezing actions (approve CRF, approve correction, mark safety report submitted) require the actor to **re-enter their password** (bcrypt-verified — a stolen open session cannot sign) and store a **SHA-256 hash of the canonical JSON** of the record, committed in the same transaction as the guarded change. Fixed 21-CFR-11-style meaning statements are shown verbatim at signing.
 5. **Input safety** — Zod validation on every service input; SQL injection structurally prevented (Drizzle parameterized statements only, no string-built SQL); React escapes output (no untrusted raw HTML).
-6. **Secrets & services** — Groq key stored server-side via admin Settings, the client only ever receives `keySet: true/false` — the key value never reaches a browser; env fallback; `.env` untracked; `/api/cron/alerts` requires a `CRON_SECRET` bearer token; TLS end to end (browser → Vercel → Neon).
+6. **Secrets & services** — Groq key stored server-side via admin Settings, the client only ever receives `keySet: true/false` — the key value never reaches a browser; env fallback; `.env` untracked; `/api/cron/alerts` requires a `CRON_SECRET` bearer token; TLS end to end (browser → Vercel → Neon). **Caching is audit-safe by written policy (ADR D-030):** exports and FHIR reads are served `no-store` (every download writes an audit row a cache hit would skip); badge counts are never cached — performance work is not allowed to bend compliance.
 7. **Safe interoperability & AI** — FHIR import creates drafts behind the `crf.enter` capability; AI extraction outputs are drafts too — **no imported or AI-generated value becomes clinical record without a signed human approval**.
 
 > **Hardening roadmap (stated honestly):** a competition prototype with three planned production upgrades — (1) private, access-checked blob reads for uploaded documents (currently unguessable-URL public storage); (2) strict Content-Security-Policy and related headers; (3) KMS-encrypted AI key at rest. None affect clinical data, which lives entirely in Postgres behind the layers above.
@@ -137,16 +140,28 @@ User asks Sphera (leaf orb)
 - **An unaudited write cannot commit.** Audit is a transactional invariant, not a log file — if the audit insert fails, the clinical change rolls back with it.
 - **Signatures are cryptographic, not cosmetic.** Password re-verification + SHA-256 record hash + fixed meaning statement, atomic with the change.
 - **One knowledge base powers the AI guide, the UAT guides — and this document.** Sphera's knowledge, the 7 UAT guides, the RBAC table and the version numbers are generated from the same source files, with drift-guard tests. Zero documentation rot, by construction.
-- **297 tests on real Postgres** (PGlite) — RBAC denials, audit atomicity, signature refusals, randomization balance, export formats proven on every commit.
+- **319 tests on real Postgres** (PGlite) — RBAC denials, audit atomicity, signature refusals, randomization balance, export formats, timezone rules and phone detection proven on every commit.
+- **Lighthouse 98 · 100 · 100 · 100** — measured on the live deployment; backed by audit-safe caching, instant loading skeletons, lazy media.
+- **Installs like a native app on phones** — PWA manifest + phone-only banner with honest platform behavior: native install dialog on Android, the true Share → Add to Home Screen path on iOS (never a fake button), tested exclusions for desktop and iPads.
 - **Interoperability is live, both directions** — judges can curl the FHIR endpoint during the demo.
 - **Regulation is configurable, not hard-coded** — AE/SAE deadlines, enrolment-lag thresholds and monitoring cadence live in an admin-edited, audited rule table.
 - **Scientific rigor built in** — permuted-block randomization, approval-blocking data queries, IEC-gated amendments, DSMB packs from live signals, NPvCC national-PV intake.
 - **AI with guardrails and memory** — Sphera remembers across sessions but knows only your role's screens; no AI output becomes clinical data without a signed human approval.
 
-## 8 · Engineering workflow
+## 8 · Performance engineering — measured, layered, audit-safe
+
+**Lighthouse (live deployment, 14 Sep 2026): Performance 98 · Accessibility 100 · Best Practices 100 · SEO 100.**
+
+Three layers, applied in order (full 14-point triage in `docs/performance-audit.md`):
+
+1. **Actual latency — response caching (ADR D-030):** warm dashboard render 1044ms → 502ms; a repeated Sphera question 1958ms → 276ms with zero LLM cost. Hard carve-outs: audited exports/FHIR reads and live badges are *never* cached (§5.6).
+2. **Perceived latency — loading skeletons:** every navigation paints instantly (design-system skeleton) while the server renders, instead of freezing the old page for 500–1100ms.
+3. **Hygiene — audited against a 14-point checklist:** lazy-loaded media, dead dependencies removed; the other 11 items are covered by the platform (Vercel CDN/compression/minification, App Router code-splitting, pooled Neon driver) or already engineered — each verdict recorded with code evidence.
+
+## 9 · Engineering workflow
 
 - **Trunk-based development** — one `main` branch, small frequent commits, every push auto-deploys to Vercel.
-- **Merge gate** — `pnpm verify` = strict typecheck + all 297 tests; nothing ships red.
+- **Merge gate** — `pnpm verify` = strict typecheck + all 319 tests; nothing ships red.
 - **Schema discipline** — every DB change is a generated, versioned Drizzle migration; the schema's history is replayable.
 - **Live E2E** — Playwright sweeps run against the deployed site itself, testing what judges will actually touch.
-- **Docs as code** — 28 ADRs, the gap analysis vs the problem statement, task tracking and these generated guides all live in the repository.
+- **Docs as code** — 30 ADRs, the gap analysis vs the problem statement, task tracking and these generated guides all live in the repository.

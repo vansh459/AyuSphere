@@ -86,10 +86,22 @@ const STACK: StackGroup[] = [
         how: "Live unread badges and toasts refresh through plain fetch on navigation and a `refreshBadges` event — no data-fetching library needed; unused dependencies are removed (perf audit T6.12).",
       },
       {
+        name: "PWA (manifest + install banner)",
+        version: "—",
+        what: "Installable web app.",
+        how: "A standalone manifest plus a phone-only install banner: Android gets the native install dialog (beforeinstallprompt), iPhone gets honest Share → Add to Home Screen instructions (Safari has no install API). Desktop and iPads never see it — including iPadOS masquerading as a Mac, excluded via touch-point detection.",
+      },
+      {
+        name: "IST date formatting (src/lib/dates.ts)",
+        version: "—",
+        what: "One timezone truth for every displayed date.",
+        how: "Servers run in UTC — bare date formatting shifted IST users back a day around midnight. All 40 date renders go through Asia/Kolkata-pinned helpers, and a static test forbids bare toLocale*String calls from ever returning.",
+      },
+      {
         name: "lucide-react · clsx · CVA · tailwind-merge",
         version: "—",
         what: "Icons and small utilities.",
-        how: "Consistent iconography and conditional class composition; date math is plain Date arithmetic in `src/lib` (deadline clocks, IST formatting).",
+        how: "Consistent iconography and conditional class composition across every screen.",
       },
     ],
   },
@@ -119,6 +131,12 @@ const STACK: StackGroup[] = [
         version: v("@vercel/blob"),
         what: "Object storage.",
         how: "Consent forms, uploaded documents and doctor-note images, stored under unguessable UUID paths and referenced from the database.",
+      },
+      {
+        name: "In-process TTL cache (src/lib/ttl-cache.ts)",
+        version: "—",
+        what: "Dependency-free response cache (ADR D-030).",
+        how: "Portfolio aggregates (45s), search results (60s) and Sphera's config + fresh-thread replies are cached per warm instance with stampede protection — while audited responses (exports, FHIR reads) and live badges are provably never cached.",
       },
     ],
   },
@@ -175,7 +193,7 @@ const STACK: StackGroup[] = [
         name: "Vitest + PGlite",
         version: `${v("vitest")} / ${v("@electric-sql/pglite")}`,
         what: "Test runner + Postgres compiled to WebAssembly.",
-        how: "297 tests in 47 files run against a REAL embedded Postgres — RBAC denials, audit atomicity, signature refusal, randomization balance and export formats are all tested with genuine SQL semantics, not mocks.",
+        how: "319 tests in 50 files run against a REAL embedded Postgres — RBAC denials, audit atomicity, signature refusal, randomization balance, export formats, timezone rules and phone detection are all tested with genuine SQL semantics, not mocks.",
       },
       {
         name: "Playwright",
@@ -354,7 +372,9 @@ function html(): string {
     safety-signal detection, DSMB packs, NPvCC spontaneous-ADR intake), monitoring visits and data queries, protocol amendments
     under IEC control, and standards-based interoperability (CDISC SDTM/ADaM/Define-XML and a live two-way FHIR R4 API).</p>
     <p>Seven enforced roles each see a tailored workspace; every mutation is validated, permission-checked and audited in the
-    same database transaction; and the whole system is gated by <b>297 automated tests</b> running against real Postgres.</p>
+    same database transaction; and the whole system is gated by <b>319 automated tests</b> running against real Postgres.
+    It installs like a native app on phones (PWA), and every displayed date is pinned to IST regardless of where the
+    server runs.</p>
   </section>
 
   <section>
@@ -482,6 +502,9 @@ function html(): string {
       the <code>.env</code> file is never committed.</li>
       <li>The scheduled alert sweep (<code>/api/cron/alerts</code>) requires a <b>bearer secret</b> (<code>CRON_SECRET</code>) —
       outsiders cannot trigger or spam the alert engine.</li>
+      <li><b>Caching is audit-safe by written policy (ADR D-030):</b> exports and FHIR reads are served
+      <code>no-store</code> because every download writes an audit row a cache hit would skip; badge counts are never
+      cached so read-state is always truthful. Performance work is not allowed to bend compliance.</li>
       <li>All traffic is HTTPS (TLS) end to end: browser → Vercel → Neon.</li>
     </ul>
 
@@ -528,8 +551,13 @@ function html(): string {
     <div class="wow"><b>One knowledge base powers the AI guide, the UAT documents — and this document.</b> Sphera's role knowledge,
     the 7 UAT guides, the RBAC table in §5.2 and the version numbers in §2 are all generated from the same source files, with
     drift-guard tests that fail if documentation and product ever disagree. Zero documentation rot, by construction.</div>
-    <div class="wow"><b>297 tests on real Postgres.</b> PGlite embeds actual Postgres in the test runner — RBAC denials, audit
+    <div class="wow"><b>319 tests on real Postgres.</b> PGlite embeds actual Postgres in the test runner — RBAC denials, audit
     atomicity, signature refusals, randomization balance and export formats are proven against genuine SQL semantics on every commit.</div>
+    <div class="wow"><b>Lighthouse 98 · 100 · 100 · 100.</b> Measured on the live deployment — performance, accessibility,
+    best practices and SEO. Backed by layered engineering: audit-safe response caching, instant loading skeletons, lazy media.</div>
+    <div class="wow"><b>Installs like a native app on phones.</b> PWA manifest + a phone-only install banner with honest platform
+    behavior: Android gets the real native install dialog; iOS gets the true Share → Add to Home Screen path, never a fake button;
+    desktops and iPads (even iPadOS masquerading as a Mac) are excluded by tested device rules.</div>
     <div class="wow"><b>Interoperability is live, both directions.</b> Judges can curl the FHIR endpoint during the demo; Define-XML
     carries real variable-level metadata; inbound bundles flow through the same human-signed approval as manual entry.</div>
     <div class="wow"><b>Regulation is configurable, not hard-coded.</b> AE/SAE escalation deadlines, enrolment-lag thresholds and
@@ -542,15 +570,36 @@ function html(): string {
   </section>
 
   <section>
-    <h2 class="sec">8 · Engineering workflow</h2>
+    <h2 class="sec">8 · Performance engineering — measured, layered, audit-safe</h2>
+    <table><tr><th>Lighthouse (live deployment, 14 Sep 2026)</th><th>Score</th></tr>
+      <tr><td>Performance</td><td class="name">98</td></tr>
+      <tr><td>Accessibility</td><td class="name">100</td></tr>
+      <tr><td>Best practices</td><td class="name">100</td></tr>
+      <tr><td>SEO</td><td class="name">100</td></tr>
+    </table>
+    <p>Three layers, applied in order (full triage in <code>docs/performance-audit.md</code>):</p>
+    <ul>
+      <li><b>Actual latency — response caching (ADR D-030):</b> warm dashboard render 1044ms → 502ms; a repeated Sphera
+      question 1958ms → 276ms with zero LLM cost. With hard carve-outs: audited exports/FHIR reads and live badges are
+      <i>never</i> cached (§5.6).</li>
+      <li><b>Perceived latency — loading skeletons:</b> every navigation paints instantly (design-system skeleton) while the
+      server renders, instead of freezing the old page for 500–1100ms.</li>
+      <li><b>Hygiene — audited against a 14-point checklist:</b> lazy-loaded media, dead dependencies removed; the other
+      11 items are covered by the platform (Vercel CDN/compression/minification, App Router code-splitting, pooled Neon
+      driver) or were already engineered — each verdict recorded with code evidence.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2 class="sec">9 · Engineering workflow</h2>
     <ul>
       <li><b>Trunk-based development:</b> one <code>main</code> branch, small frequent commits, every push auto-deploys to Vercel.</li>
-      <li><b>Merge gate:</b> <code>pnpm verify</code> = strict TypeScript typecheck + the full 297-test suite; nothing ships red.</li>
+      <li><b>Merge gate:</b> <code>pnpm verify</code> = strict TypeScript typecheck + the full 319-test suite; nothing ships red.</li>
       <li><b>Schema discipline:</b> every database change is a generated, versioned Drizzle migration applied to Neon — the schema's
       history is replayable.</li>
       <li><b>Live E2E:</b> Playwright sweeps run against the deployed site itself (logins for all 7 roles, badges, tabs, search,
       mobile drawer) — we test what judges will actually touch.</li>
-      <li><b>Docs as code:</b> architecture decisions (28 ADRs), the gap analysis against the problem statement, task tracking and
+      <li><b>Docs as code:</b> architecture decisions (30 ADRs), the gap analysis against the problem statement, task tracking and
       these generated guides all live in the repository.</li>
     </ul>
   </section>
