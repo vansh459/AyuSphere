@@ -89,6 +89,8 @@ function Attachment({ m }: { m: Message }) {
           <img
             src={m.attachmentUrl}
             alt={name}
+            loading="lazy"
+            decoding="async"
             className="max-h-64 w-full rounded-xl object-contain"
           />
         }

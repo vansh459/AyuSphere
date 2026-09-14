@@ -26,7 +26,6 @@
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "date-fns": "^4.4.0",
     "drizzle-orm": "^0.45.2",
     "framer-motion": "^13.2.0",
     "lucide-react": "^1.44.0",
@@ -35,7 +34,6 @@
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "recharts": "^3.10.1",
-    "swr": "^2.5.1",
     "tailwind-merge": "^3.6.0",
     "ws": "^8.21.3",
     "zod": "^4.6.2"

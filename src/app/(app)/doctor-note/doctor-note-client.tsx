@@ -225,6 +225,8 @@ export function DoctorNoteClient({
                 <img
                   src={preview}
                   alt="Uploaded doctor note"
+                  loading="lazy"
+                  decoding="async"
                   className="mt-4 max-h-[480px] w-full rounded-xl object-contain"
                 />
               ) : null}

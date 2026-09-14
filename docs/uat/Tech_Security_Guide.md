@@ -26,8 +26,8 @@ Seven enforced roles each see a tailored workspace; every mutation is validated,
 | **Tailwind CSS 4** | Utility-first CSS | Implements the design system (glass + clay tokens, one font, two text sizes); a static design-qa test fails the build on violations. |
 | **framer-motion** | Animation | Small approved motion catalog — decorative only, never load-bearing. |
 | **Recharts** | Charts | Dashboard KPIs: enrolment progress, AE severity mix, portfolio charts. |
-| **SWR** | Client data fetching | Live unread badges and toasts — sidebar counts refresh on navigation/events instead of freezing in the server layout. |
-| lucide-react · clsx · CVA · tailwind-merge · date-fns | Icons & utilities | Iconography, class composition, deadline-clock date math. |
+| **Live badges (fetch + events)** | Dependency-free client refresh | Live unread badges and toasts refresh via plain `fetch` on navigation and a `refreshBadges` event — no data-fetching library; unused deps removed (T6.12). |
+| lucide-react · clsx · CVA · tailwind-merge | Icons & utilities | Iconography, class composition; date math is plain `Date` arithmetic in `src/lib`. |
 
 ### Backend & data
 

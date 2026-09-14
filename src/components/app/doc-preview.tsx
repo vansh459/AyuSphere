@@ -125,6 +125,8 @@ export function DocPreview({
                   <img
                     src={url}
                     alt={name}
+                    loading="lazy"
+                    decoding="async"
                     className="mx-auto max-h-[70vh] w-auto max-w-full rounded-xl object-contain"
                   />
                 ) : kind === "pdf" || kind === "text" ? (

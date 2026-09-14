@@ -73,6 +73,8 @@ export default async function ExtractionsPage() {
                     <img
                       src={e.blobUrl}
                       alt={`Scanned note for ${subjectCode}`}
+                      loading="lazy"
+                      decoding="async"
                       className="h-40 w-full rounded-xl border border-line bg-bg object-contain transition-transform duration-200 hover:-translate-y-[2px]"
                     />
                   }
