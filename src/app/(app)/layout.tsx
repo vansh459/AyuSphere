@@ -10,6 +10,7 @@ import { MobileNav } from "@/components/app/mobile-nav";
 import { QuickSearch } from "@/components/app/quick-search";
 import { TopbarBell } from "@/components/app/live-badges";
 import { GuideWidget } from "@/components/app/guide-widget";
+import { InstallBanner } from "@/components/app/install-banner";
 import { MessageToast } from "@/components/app/message-toast";
 import { Button } from "@/components/ui/button";
 
@@ -105,6 +106,7 @@ export default async function AppLayout({
         <main className="flex-1 px-4 py-6 md:px-6">{children}</main>
       </div>
       <GuideWidget userName={user.name ?? "there"} />
+      <InstallBanner />
       {can(user.role, "chat.use") || can(user.role, "alert.acknowledge") ? (
         <MessageToast
           canChat={can(user.role, "chat.use")}
