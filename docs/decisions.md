@@ -242,6 +242,17 @@ Related docs: [development-plan.md](development-plan.md) · [architecture.md](ar
 
 ---
 
+## D-030 — Response caching: in-process TTL, with explicit never-cache carve-outs
+
+- **Date:** 2026-09-14
+- **Context:** Repeat loads re-ran heavy portfolio aggregates on every request, every Sphera turn re-read the settings row, and identical guide questions re-billed Groq. But this is an audited clinical app: some responses must never be cached.
+- **Decision:** One dependency-free primitive, `src/lib/ttl-cache.ts` (per-instance Map + TTL + in-flight dedupe + 500-entry cap; Vercel Fluid Compute reuses instances, so warm instances get real hit rates). Cached: dashboard/monitoring portfolio aggregates (45s), quick-search results per role+query (60s server + 30s private browser), Sphera guide config (60s), and Sphera replies ONLY for empty-thread non-greeting turns (10min; with no history the inputs are fully determined by role+name+question, and the turn is still persisted so memory stays real). Never cached, stated in code: `/api/export` and FHIR GETs (`private, no-store` — every download/read writes an audit row a cache hit would skip), `/api/badges` (instant clear after reading a thread), greetings, and any feed that must reflect the user's own mutation immediately (approvals, queries, visits, export row counts).
+- **Alternatives:** Next 16 cache APIs (`node_modules/next/dist/docs` absent in this checkout — semantics unverifiable per AGENTS.md, and route-level caching cannot express the audit carve-outs); Redis/Upstash (infra + a secret for a demo-scale win).
+- **Rationale:** Biggest latency/cost wins with zero infrastructure, unit-testable, and the correctness-critical paths are explicitly exempted rather than accidentally cached.
+- **Consequences:** Cached aggregates may lag up to their TTL after a write; a cold instance is a cache miss. An Admin guide-key change can take ≤60s to apply. If cross-instance invalidation is ever needed, swap the primitive for a shared store behind the same interface.
+
+---
+
 ## Template for new decisions
 
 ```markdown

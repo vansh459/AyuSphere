@@ -19,6 +19,7 @@ import {
   getThreadHistory,
   runGuideTurn,
 } from "@/services/guide-chat";
+import { appCache } from "@/lib/ttl-cache";
 
 /** fake streaming model that records every message list it receives */
 class CapturingModel extends FakeListChatModel {
@@ -160,6 +161,65 @@ describe("Sphera v2 — turn execution + persistence", () => {
     expect(contents[1]).toBe("t4"); // t0–t3 trimmed away
     expect(contents.at(-2)).toBe("t11");
     expect(contents.at(-1)).toBe("latest question");
+  });
+
+  it("CACHE (T6.10): an identical empty-thread question is served without a model call — turn still persisted", async () => {
+    appCache.invalidate("guide:");
+    const [fresh] = await db
+      .insert(users)
+      .values([{ email: "pv@sph.demo", passwordHash: "x", name: "Dr. Kavya", role: "pv" }])
+      .returning();
+    const ask = (threadId: string, model: CapturingModel) =>
+      runGuideTurn(db, {
+        userId: fresh.id,
+        role: "pv",
+        userName: "Dr. Kavya",
+        threadId,
+        message: "How do I report an SAE?",
+        model,
+      });
+
+    const m1 = new CapturingModel({ responses: ["Open **Adverse Events**…"] });
+    const first = await ask("t-c1", m1);
+    expect(await new Response(first.stream).text()).toBe("Open **Adverse Events**…");
+    expect(m1.received).toHaveLength(1);
+
+    // same question, fresh (empty) thread → cache hit, model never called
+    const m2 = new CapturingModel({ responses: ["SHOULD NOT BE USED"] });
+    const second = await ask("t-c2", m2);
+    expect(await new Response(second.stream).text()).toBe("Open **Adverse Events**…");
+    expect(second.cached).toBe(true);
+    expect(m2.received).toHaveLength(0);
+    // memory stays real: the cached turn is persisted like any other
+    expect(
+      (await getThreadHistory(db, fresh.id, "t-c2")).map((h) => h.role),
+    ).toEqual(["user", "assistant"]);
+
+    // a thread WITH history never reads the cache (memory must stay real)
+    const m3 = new CapturingModel({ responses: ["Fresh model reply"] });
+    const third = await ask("t-c2", m3);
+    expect(await new Response(third.stream).text()).toBe("Fresh model reply");
+    expect(third.cached).toBeUndefined();
+    expect(m3.received).toHaveLength(1);
+  });
+
+  it("CACHE: greetings are never cached", async () => {
+    appCache.invalidate("guide:");
+    const greet = (model: CapturingModel, threadId: string) =>
+      runGuideTurn(db, {
+        userId,
+        role: "pi",
+        userName: "Dr. Ananya",
+        threadId,
+        greet: true,
+        model,
+      });
+    const g1 = new CapturingModel({ responses: ["Hello!"] });
+    await new Response((await greet(g1, "t-g1")).stream).text();
+    const g2 = new CapturingModel({ responses: ["Hello again!"] });
+    const second = await greet(g2, "t-g2");
+    expect(await new Response(second.stream).text()).toBe("Hello again!");
+    expect(g2.received).toHaveLength(1); // model called — no cache involved
   });
 
   it("refuses an empty turn", async () => {

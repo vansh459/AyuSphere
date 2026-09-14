@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { getDb } from "@/db";
 import { quickSearch } from "@/services/search";
+import { appCache } from "@/lib/ttl-cache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,10 +18,17 @@ export async function GET(req: Request) {
     return NextResponse.json({ results: [] });
   }
   try {
-    const results = await quickSearch(getDb(), { role: session.user.role }, q);
+    // results are role-shaped (not user-specific) — 60s server TTL per
+    // (role, q), plus a short private browser cache for repeated keystrokes
+    const role = session.user.role;
+    const results = await (appCache.getOrCompute(
+      `search:${role}:${q.toLowerCase().trim()}`,
+      60_000,
+      () => quickSearch(getDb(), { role }, q),
+    ) as ReturnType<typeof quickSearch>);
     return NextResponse.json(
       { results },
-      { headers: { "cache-control": "no-store" } },
+      { headers: { "cache-control": "private, max-age=30" } },
     );
   } catch {
     return NextResponse.json({ results: [] });

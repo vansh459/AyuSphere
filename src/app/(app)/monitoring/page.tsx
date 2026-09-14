@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { eq, inArray } from "drizzle-orm";
 import { requireActor, withError } from "@/lib/actor";
 import { fmtDate } from "@/lib/dates";
+import { appCache } from "@/lib/ttl-cache";
 import { getDb } from "@/db";
 import { alerts, trials } from "@/db/schema";
 import { sitePerformance } from "@/services/kpi";
@@ -57,12 +58,18 @@ export default async function MonitoringPage(props: {
       .select()
       .from(trials)
       .where(inArray(trials.status, ["active", "enrolment_closed", "followup"]));
+    // per-trial aggregates tolerate ~45s staleness (D-030); visits, queries
+    // and alerts below stay live
     perfByTrial = await Promise.all(
       activeTrials.map(async (t) => ({
         protocolCode: t.protocolCode,
         title: t.title,
-        perf: await sitePerformance(db, t.id),
-        findings: await runDataQualityChecks(db, t.id),
+        perf: await (appCache.getOrCompute(`mon:perf:${t.id}`, 45_000, () =>
+          sitePerformance(db, t.id),
+        ) as ReturnType<typeof sitePerformance>),
+        findings: await (appCache.getOrCompute(`mon:dq:${t.id}`, 45_000, () =>
+          runDataQualityChecks(db, t.id),
+        ) as ReturnType<typeof runDataQualityChecks>),
       })),
     );
     deviationAlerts = await db

@@ -12,6 +12,7 @@ import type { BaseChatModel } from "@langchain/core/language_models/chat_models"
 import type { Db } from "@/db";
 import { guideMessages } from "@/db/schema";
 import type { Role } from "@/lib/rbac";
+import { appCache } from "@/lib/ttl-cache";
 import { buildGuideGraph } from "@/lib/guide/graph";
 import {
   GREETING_REQUEST,
@@ -65,7 +66,22 @@ export type GuideTurnResult = {
   stream: ReadableStream<Uint8Array>;
   /** resolves with the full reply once the stream finishes (tests await it) */
   completion: Promise<string>;
+  /** true when the reply was served from the response cache (no model call) */
+  cached?: boolean;
 };
+
+/**
+ * Reply cache (T6.10, D-030): ONLY empty-thread, non-greeting turns are
+ * cacheable — with no history, the model's inputs are fully determined by
+ * (role, userName, question), so serving the stored reply is equivalent.
+ * Turns in a thread WITH history are never cached (memory must stay real),
+ * and greetings are never cached (personalized rehydration moment).
+ */
+const REPLY_TTL_MS = 10 * 60_000;
+
+export function guideReplyCacheKey(role: Role, userName: string, text: string): string {
+  return `guide:${role}:${userName}:${text.toLowerCase().replace(/\s+/g, " ").trim()}`;
+}
 
 /**
  * Runs one guide turn: load thread memory → LangGraph (system prompt +
@@ -87,6 +103,31 @@ export async function runGuideTurn(
   const lcHistory = history.map((t) =>
     t.role === "user" ? new HumanMessage(t.content) : new AIMessage(t.content),
   );
+
+  // cache lookup — see guideReplyCacheKey's contract above
+  const cacheable = !input.greet && history.length === 0 && text.length <= 200;
+  const cacheKey = cacheable
+    ? guideReplyCacheKey(input.role, input.userName, text)
+    : null;
+  if (cacheKey) {
+    const hit = appCache.get(cacheKey) as string | undefined;
+    if (hit) {
+      // the turn is still persisted — memory stays real on cache hits
+      const persist = db.insert(guideMessages).values([
+        { userId: input.userId, threadId: input.threadId, role: "user" as const, content: text },
+        { userId: input.userId, threadId: input.threadId, role: "assistant" as const, content: hit },
+      ]);
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream<Uint8Array>({
+        async start(controller) {
+          controller.enqueue(encoder.encode(hit));
+          await persist;
+          controller.close();
+        },
+      });
+      return { stream, completion: Promise.resolve(hit), cached: true };
+    }
+  }
 
   const graph = buildGuideGraph(input.model);
   const tokenStream = await graph.stream(
@@ -146,6 +187,9 @@ export async function runGuideTurn(
               content: full,
             },
           ]);
+        }
+        if (cacheKey && full.trim()) {
+          appCache.set(cacheKey, full, REPLY_TTL_MS);
         }
         controller.close();
         resolveCompletion(full);

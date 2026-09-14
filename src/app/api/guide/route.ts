@@ -14,6 +14,7 @@ import { auth } from "@/lib/auth";
 import { can } from "@/lib/rbac";
 import { getDb } from "@/db";
 import { getGuideConfig, type GuideConfig } from "@/services/settings";
+import { appCache } from "@/lib/ttl-cache";
 import { createGuideModel } from "@/lib/guide/model";
 import { getThreadHistory, runGuideTurn } from "@/services/guide-chat";
 
@@ -39,8 +40,18 @@ const NO_GUIDE_MESSAGE =
  * Config lookup that can never eat the whole function budget: the DB read
  * (Settings row saved by the Admin — the primary source) is capped at 3s;
  * on a hang we fall back to env-only rather than riding into a platform 504.
+ * Cached 60s per instance (D-030) — an Admin key/model change can lag up to
+ * a minute; every turn saves a DB round-trip.
  */
 async function resolveGuideConfig(): Promise<GuideConfig | null> {
+  return appCache.getOrCompute(
+    "guide:config",
+    60_000,
+    resolveGuideConfigUncached,
+  ) as Promise<GuideConfig | null>;
+}
+
+async function resolveGuideConfigUncached(): Promise<GuideConfig | null> {
   const envOnly = (): GuideConfig | null => {
     const key = process.env.GROQ_API_KEY ?? process.env.GROQ_API;
     return key

@@ -88,6 +88,8 @@ export async function GET(req: Request) {
     headers: {
       "content-type": contentType,
       "content-disposition": `attachment; filename="${filename}"`,
+      // never cached (D-030): every download must write its audit row
+      "cache-control": "private, no-store",
     },
   });
 }

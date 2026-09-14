@@ -19,6 +19,7 @@ import { auth } from "@/lib/auth";
 import { can } from "@/lib/rbac";
 import { dashboardVariant, type DashboardCard } from "@/lib/dashboard-variants";
 import { fmtDate } from "@/lib/dates";
+import { appCache } from "@/lib/ttl-cache";
 import { getDb } from "@/db";
 import { participants, trials, visits } from "@/db/schema";
 import {
@@ -102,15 +103,19 @@ export default async function DashboardPage() {
 
   try {
     const db = getDb();
+    // portfolio-wide aggregates tolerate ~45s staleness (D-030); the
+    // action-driven feeds below (approvals, queries, activities…) stay live
+    const cached = <T,>(key: string, fn: () => Promise<T>) =>
+      appCache.getOrCompute(`dash:${key}`, 45_000, fn as () => Promise<unknown>) as Promise<T>;
     const [stats, progress, distribution, sitePerf, activities, upcoming, insights] =
       await Promise.all([
-        statCards(db),
-        trialProgressSeries(db),
-        participantDistribution(db),
-        sitePerformanceAggregate(db),
+        cached("stats", () => statCards(db)),
+        cached("progress", () => trialProgressSeries(db)),
+        cached("distribution", () => participantDistribution(db)),
+        cached("site-perf", () => sitePerformanceAggregate(db)),
         recentActivities(db),
         upcomingVisitList(db),
-        aiInsights(db),
+        cached("insights", () => aiInsights(db)),
       ]);
     let visitOptions: VisitOption[] = [];
     if (can(user.role, "crf.enter")) {
@@ -159,7 +164,7 @@ export default async function DashboardPage() {
       ? (await openAesByDeadline(db)).slice(0, 4)
       : null;
     const signals = show("safety-signals")
-      ? (await safetySignals(db)).slice(0, 5)
+      ? (await cached("signals", () => safetySignals(db))).slice(0, 5)
       : null;
     const monitoringSites = show("monitoring-panel")
       ? await listActiveTrialSites(db)

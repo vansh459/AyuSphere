@@ -24,6 +24,8 @@ export async function GET() {
     });
     return NextResponse.json(
       { badges },
+      // deliberately uncached (D-030): the sidebar clears a badge the moment
+      // a thread is read — any TTL would resurrect the stale-badge bug
       { headers: { "cache-control": "no-store" } },
     );
   } catch {

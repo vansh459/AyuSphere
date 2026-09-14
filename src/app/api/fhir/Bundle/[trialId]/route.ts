@@ -43,6 +43,10 @@ export async function GET(
   });
 
   return NextResponse.json(bundle, {
-    headers: { "content-type": "application/fhir+json" },
+    headers: {
+      "content-type": "application/fhir+json",
+      // never cached (D-030): every FHIR read must write its audit row
+      "cache-control": "private, no-store",
+    },
   });
 }
